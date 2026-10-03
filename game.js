@@ -282,7 +282,6 @@
       car.add(model);
       model.updateMatrixWorld(true);
       discoverCarParts(model);
-      addMissingCarParts(model);
       updatePartsPanel();
     }, undefined, function (error) {
       if (request !== loadRequest) return;
@@ -540,108 +539,6 @@
     part.targetAngle = open ? part.angle : 0;
   }
 
-  function addMissingCarParts(model) {
-    var bounds = new THREE.Box3().setFromObject(model);
-    var size = bounds.getSize(new THREE.Vector3());
-    var center = bounds.getCenter(new THREE.Vector3());
-    var paint = material(0x263d56, 0.38, 0.42);
-    model.traverse(function (node) {
-      if (!node.isMesh) return;
-      var materials = Array.isArray(node.material) ? node.material : [node.material];
-      for (var i = 0; i < materials.length; i++) {
-        if (materials[i].color && materials[i].color.getHex() !== 0xffffff && materials[i].color.getHex() !== 0x000000) {
-          paint.color.copy(materials[i].color);
-          paint.metalness = materials[i].metalness || 0;
-          paint.roughness = materials[i].roughness || 0.5;
-          return;
-        }
-      }
-    });
-
-    if (!parts.hood) {
-        var hood = createProxyPanel('Капот', 'hood', bounds, size, center, paint, 0.68, 0.22, 0.62);
-      parts.hood = hood;
-    }
-    if (!parts.trunk) {
-      parts.trunk = createProxyPanel('Багажник', 'trunk', bounds, size, center, paint, 0.62, 0.2, -0.62);
-    }
-    if (!parts.doorL) parts.doorL = createProxyDoor('doorL', 'Левая дверь', bounds, size, center, paint, -1);
-    if (!parts.doorR) parts.doorR = createProxyDoor('doorR', 'Правая дверь', bounds, size, center, paint, 1);
-    if (!parts.engine) {
-      parts.engine = createProxyServicePart('Двигатель', 'engine', center, size, 0x343a3a, 0, 0.43, 0.32);
-    }
-    if (!parts.battery) {
-      parts.battery = createProxyServicePart('Аккумулятор', 'battery', center, size, 0x293b35, -0.2, 0.58, 0.47);
-    }
-    if (!parts.radiator) {
-      parts.radiator = createProxyServicePart('Радиатор', 'radiator', center, size, 0x697879, 0, 0.43, 0.55);
-    }
-  }
-
-  function createProxyPanel(label, id, bounds, size, center, paint, widthRatio, lengthRatio, endRatio) {
-    var group = new THREE.Group();
-    var panelWidth = size.x * widthRatio;
-    var panelLength = size.z * lengthRatio;
-    var panelHeight = Math.max(size.y * 0.025, 0.035);
-    var front = id === 'hood';
-    var panelZ = center.z + size.z * endRatio;
-    var panelY = bounds.min.y + size.y * (front ? 0.7 : 0.63);
-    var recess = box(group, panelWidth + 0.025, 0.025, panelLength + 0.025, material(0x101719, 0.85), center.x, panelY - 0.045, panelZ);
-    recess.visible = false;
-    var mesh = box(group, panelWidth, panelHeight, panelLength, paint, center.x, panelY, panelZ);
-    mesh.material = paint.clone();
-    group.position.set(0, 0, 0);
-    car.add(group);
-    var part = createPart(id, label, [group], {
-      open: true,
-      axis: 'x',
-      angle: front ? -0.72 : 0.68,
-      center: new THREE.Vector3(center.x, panelY, panelZ + (front ? -panelLength * 0.45 : panelLength * 0.45))
-    });
-    part.recess = recess;
-    return part;
-  }
-
-  function createProxyDoor(id, label, bounds, size, center, paint, side) {
-    var panelLength = size.z * 0.28;
-    var panelHeight = size.y * 0.38;
-    var hingeZ = center.z + size.z * 0.2;
-    var panelY = bounds.min.y + size.y * 0.56;
-    var sideX = center.x + side * size.x * 0.47;
-    var backing = box(car, size.x * 0.018, panelHeight * 1.04, panelLength * 1.04, material(0x111719, 0.86), sideX, panelY, hingeZ - panelLength / 2);
-    backing.name = id + '_door_recess';
-    backing.visible = false;
-    backing.position.x = sideX;
-
-    var pivot = new THREE.Group();
-    car.add(pivot);
-    pivot.position.set(sideX, panelY, hingeZ);
-    var door = box(pivot, size.x * 0.022, panelHeight, panelLength, paint.clone(), side * size.x * 0.012, 0, -panelLength / 2);
-    door.name = id + '_door_panel';
-    var part = createPart(id, label, [pivot], {
-      open: true,
-      axis: 'y',
-      angle: side * -0.9,
-      center: pivot.position.clone()
-    });
-    part.recess = backing;
-    return part;
-  }
-
-  function createProxyServicePart(label, id, center, size, color, xRatio, yRatio, zRatio) {
-    var group = new THREE.Group();
-    var position = new THREE.Vector3(center.x + size.x * xRatio, center.y - size.y * 0.5 + size.y * yRatio, center.z + size.z * zRatio);
-    var width = size.x * (id === 'engine' ? 0.32 : 0.14);
-    var length = size.z * (id === 'engine' ? 0.26 : 0.12);
-    var height = size.y * (id === 'engine' ? 0.16 : 0.12);
-    box(group, width, height, length, material(color, 0.65, 0.24), position.x, position.y, position.z);
-    if (id === 'engine') {
-      box(group, width * 0.45, height * 0.55, length * 0.62, material(0x667170, 0.5, 0.35), position.x, position.y + height * 0.7, position.z);
-    }
-    car.add(group);
-    return createPart(id, label, [group], { center: position });
-  }
-
   function buildWorkshop() {
     var pad = box(scene, 8, 0.08, 7, 0x9c9c83, -2.5, -0.025, -0.5, material(0x9c9c83));
     pad.receiveShadow = true;
@@ -817,9 +714,9 @@
       if (part.openable) html += '<button class="part-action part-open-action" data-open-part="' + part.id + '" type="button">' + (part.isOpen ? 'ЗАКРЫТЬ' : 'ОТКРЫТЬ') + '</button>';
       html += '<button class="part-action" data-part="' + part.id + '" type="button">' + (part.visible ? 'СНЯТЬ' : 'УСТАНОВИТЬ') + '</button></div>';
     }
-    list.innerHTML = html || '<p class="parts-empty">В этой GLB-модели кузовные детали объединены и отдельно не размечены.</p>';
+    list.innerHTML = html || '<p class="parts-empty">В этой модели нет отдельных деталей для мастерской.</p>';
     document.getElementById('part-count').textContent = ids.length + ' ДЕТАЛЕЙ';
-    document.getElementById('parts-hint').textContent = 'Открой кузовную деталь, затем сними её. Установи новую — все действия анимированы.';
+    document.getElementById('parts-hint').textContent = 'Здесь показаны только детали, которые действительно есть отдельно в модели.';
     var condition = ids.length ? Math.round(ready / ids.length * 100) : 100;
     document.getElementById('condition-value').textContent = condition + '%';
     document.getElementById('condition-bar').style.width = condition + '%';
