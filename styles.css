@@ -67,7 +67,7 @@ h1 em { color: var(--acid); font-style: normal; }
 .top-status .status-light { width: 6px; height: 6px; }
 .icon-button { display: grid; width: 32px; height: 32px; margin-left: 15px; place-items: center; border: 1px solid rgba(255,255,255,.22); color: #d7e0d8; background: transparent; font-size: 20px; cursor: pointer; }
 .icon-button:hover { border-color: var(--acid); color: var(--acid); }
-.drive-readout { position: absolute; top: 94px; left: 28px; display: flex; align-items: baseline; gap: 8px; padding: 12px 15px; border-left: 2px solid var(--acid); background: rgba(17,25,22,.8); }
+.drive-readout { position: absolute; top: 94px; left: 28px; display: flex; align-items: baseline; gap: 8px; padding: 12px 15px; border-left: 2px solid var(--acid); background: rgba(17,25,22,.8); pointer-events: auto; }
 .readout-label, .gear-label { align-self: center; color: #a9b5ab; font-size: 8px; font-weight: 800; letter-spacing: 1px; }
 .drive-readout strong { font-family: 'Barlow Condensed', sans-serif; font-size: 35px; line-height: 1; }
 .speed-unit { color: #a9b5ab; font-size: 9px; }
@@ -105,7 +105,13 @@ h1 em { color: var(--acid); font-style: normal; }
 .corner-cross { margin-right: 7px; color: var(--acid); }
 .toast { position: absolute; left: 50%; bottom: 75px; padding: 10px 16px; transform: translate(-50%, 8px); opacity: 0; border: 1px solid var(--line); background: rgba(17,25,22,.92); color: var(--ink); font-size: 11px; transition: opacity .18s ease, transform .18s ease; }
 .toast.is-visible { transform: translate(-50%, 0); opacity: 1; }
-.mobile-controls { display: none; }
+.drive-controls { position: absolute; right: 28px; bottom: 25px; display: flex; align-items: end; justify-content: space-between; gap: 18px; padding: 12px; border: 1px solid rgba(255,255,255,.14); background: rgba(17,25,22,.76); pointer-events: auto; }
+.steer-pad, .pedal-pad { display: flex; align-items: end; gap: 7px; }
+.drive-controls button { min-width: 46px; min-height: 46px; border: 1px solid rgba(255,255,255,.28); border-radius: 50%; color: white; background: rgba(255,255,255,.07); font-size: 16px; cursor: pointer; touch-action: none; user-select: none; }
+.drive-controls button:hover, .drive-controls button:active, .drive-controls button.is-pressed { border-color: var(--acid); background: rgba(217,243,106,.23); }
+.drive-controls .brake-control, .drive-controls .reverse-control { min-width: 58px; padding: 0 8px; border-radius: 7px; font-size: 8px; font-weight: 800; }
+.drive-controls .gas-control { min-width: 64px; height: 58px; border-color: rgba(217,243,106,.75); color: var(--acid); font-size: 9px; font-weight: 800; }
+.drive-controls .gas-control span { font-size: 16px; }
 .warning-screen { position: absolute; z-index: 5; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: rgba(12,17,15,.94); text-align: center; }
 .warning-screen h2 { margin: 12px 0 5px; font-family: 'Barlow Condensed', sans-serif; font-size: 32px; }
 .warning-screen p { max-width: 440px; color: #aab6ac; font-size: 13px; line-height: 1.6; }
@@ -152,14 +158,10 @@ h1 em { color: var(--acid); font-style: normal; }
   .part-state { display: inline; margin-left: 4px; }
   .drive-hint { display: none; }
   .corner-note { right: 12px; bottom: 13px; font-size: 7px; }
-  .device-mobile .mobile-controls { position: absolute; right: 18px; bottom: 40px; left: 18px; display: flex; justify-content: space-between; align-items: end; pointer-events: auto; }
-  .steer-pad, .pedal-pad { display: flex; align-items: end; gap: 8px; }
-  .mobile-controls button { min-width: 54px; min-height: 54px; border: 1px solid rgba(255,255,255,.34); border-radius: 50%; color: white; background: rgba(17,25,22,.64); font-size: 20px; touch-action: none; }
-  .mobile-controls button:active { border-color: var(--acid); background: rgba(217,243,106,.25); }
-  .mobile-controls .brake-control, .mobile-controls .gas-control { min-width: 62px; min-height: 62px; font-size: 9px; font-weight: 800; }
-  .mobile-controls .gas-control { border-color: rgba(217,243,106,.7); color: var(--acid); }
-  .mobile-controls .gas-control span { font-size: 16px; }
-  .device-desktop .mobile-controls { display: none; }
+  .drive-controls { right: 12px; bottom: 22px; left: 12px; padding: 0; border: 0; background: transparent; }
+  .drive-controls button { min-width: 53px; min-height: 53px; border-color: rgba(255,255,255,.42); background: rgba(17,25,22,.78); font-size: 20px; }
+  .drive-controls .brake-control, .drive-controls .reverse-control { min-width: 55px; min-height: 48px; }
+  .drive-controls .gas-control { min-width: 62px; min-height: 62px; }
 }
 
 @media (max-width: 380px) {

@@ -9,8 +9,11 @@
   var gasTapTimer;
   var parts = {};
   var speed = 0;
-  var heading = 0;
   var distance = 0;
+  var heading = 0;
+  var steering = 0;
+  var selectedGear = 'D';
+  var engineRunning = true;
   var driving = true;
   var device = 'desktop';
   var toastTimer;
@@ -279,6 +282,7 @@
       car.add(model);
       model.updateMatrixWorld(true);
       discoverCarParts(model);
+      addMissingCarParts(model);
       updatePartsPanel();
     }, undefined, function (error) {
       if (request !== loadRequest) return;
@@ -290,12 +294,13 @@
   function discoverCarParts(model) {
     var candidates = [];
     model.traverse(function (node) {
-      if (node !== model && node.children.length && node.name) candidates.push(node);
+      if (node !== model && node.name && (node.children.length || node.isMesh)) candidates.push(node);
     });
     var definitions = [
-      { id: 'hood', label: 'Капот', pattern: /sm_hood|hood[ab]?_(?:body|black|chrome)/i, open: true, hinge: 'maxZ', direction: -1 },
-      { id: 'trunk', label: 'Багажник', pattern: /(?:^|[_:])(?:sm_)?trunk(?:[_:]|$)|lod0_trunk_(?:body|black|chrome)/i, open: true, hinge: 'minZ', direction: 1 },
-      { id: 'doors', label: 'Двери', pattern: /(?:^|[_:])(?:sm_)?doors?(?:[_:]|$)|lod0_door/i, open: true, hinge: 'centerZ', direction: 1 },
+      { id: 'hood', label: 'Капот', pattern: /sm_hood|hood[ab]?_(?:body|black|chrome)/i, open: true, axis: 'x', angle: -0.72, hinge: 'minZ' },
+      { id: 'trunk', label: 'Багажник', pattern: /(?:^|[_:])(?:sm_)?trunk(?:[_:]|$)|lod0_trunk_(?:body|black|chrome)/i, open: true, axis: 'x', angle: 0.68, hinge: 'maxZ' },
+      { id: 'doorL', label: 'Левая дверь', pattern: /(?:^|[_:])(?:sm_)?door[_ .-]?(?:l|left|fl|rl)(?:[_:]|$)|doorleft|doorfl|doorrl/i, open: true, axis: 'y', angle: 0.9 },
+      { id: 'doorR', label: 'Правая дверь', pattern: /(?:^|[_:])(?:sm_)?door[_ .-]?(?:r|right|fr|rr)(?:[_:]|$)|doorright|doorfr|doorrr/i, open: true, axis: 'y', angle: -0.9 },
       { id: 'engine', label: 'Двигатель', pattern: /(?:^|[_:])(?:sm_)?engine(?:[_:]|$)/i },
       { id: 'battery', label: 'Аккумулятор', pattern: /(?:^|[_:])(?:sm_)?battery(?:[_:]|$)/i },
       { id: 'radiator', label: 'Радиатор', pattern: /(?:^|[_:])(?:sm_)?radiator(?:[_:]|$)/i }
@@ -309,14 +314,28 @@
         if (definition.pattern.test(candidate.name)) partGroups[definition.id].push(candidate);
       }
       if (partGroups[definition.id].length) {
-        parts[definition.id] = createPart(definition.id, definition.label, partGroups[definition.id], definition);
+        var topLevelMatches = [];
+        for (var matchIndex = 0; matchIndex < partGroups[definition.id].length; matchIndex++) {
+          var match = partGroups[definition.id][matchIndex];
+          var hasMatchingAncestor = false;
+          for (var ancestorIndex = 0; ancestorIndex < partGroups[definition.id].length; ancestorIndex++) {
+            var possibleAncestor = partGroups[definition.id][ancestorIndex];
+            if (match !== possibleAncestor && possibleAncestor.getObjectById(match.id)) {
+              hasMatchingAncestor = true;
+              break;
+            }
+          }
+          if (!hasMatchingAncestor) topLevelMatches.push(match);
+        }
+        parts[definition.id] = createPart(definition.id, definition.label, topLevelMatches, definition);
       }
     }
 
     var wheelGroups = [];
     for (var wheelIndex = 0; wheelIndex < candidates.length; wheelIndex++) {
       var wheelGroup = candidates[wheelIndex];
-      if (/wheel|tyre|tire/i.test(wheelGroup.name) && !/steering|wheelhouse|brake|hub/i.test(wheelGroup.name)) wheelGroups.push(wheelGroup);
+      if (/wheel|tyre|tire/i.test(wheelGroup.name) && !/^(?:wheels|tyres|tires)$/i.test(wheelGroup.name) &&
+          !/steering|wheelhouse|brake|hub/i.test(wheelGroup.name)) wheelGroups.push(wheelGroup);
     }
     var uniqueWheelGroups = [];
     for (var groupIndex = 0; groupIndex < wheelGroups.length; groupIndex++) {
@@ -330,21 +349,156 @@
       var bounds = new THREE.Box3().setFromObject(group);
       return { group: group, bounds: bounds, center: bounds.getCenter(new THREE.Vector3()) };
     }).sort(function (a, b) { return a.center.z - b.center.z; });
-    if (wheelBounds.length && wheelBounds.length < 4) {
-      parts.wheelSet = createPart('wheelSet', 'Комплект колёс (единый узел)', wheelBounds.map(function (wheel) { return wheel.group; }), { wheel: true });
-      return;
+    if (wheelBounds.length === 4) return registerWheelGroups(wheelBounds);
+
+    var tireMeshes = [];
+    model.traverse(function (node) {
+      var nodeNames = node.name;
+      var ancestor = node.parent;
+      while (ancestor && ancestor !== model) {
+        nodeNames += ' ' + ancestor.name;
+        ancestor = ancestor.parent;
+      }
+      if (node.isMesh && /tire|tyre/i.test(nodeNames) && !/brake|hub|steering/i.test(nodeNames)) tireMeshes.push(node);
+    });
+    var splitWheels = [];
+    for (var meshIndex = 0; meshIndex < tireMeshes.length; meshIndex++) {
+      splitWheels = splitTireMesh(tireMeshes[meshIndex]);
+      if (splitWheels.length === 4) break;
     }
+    if (splitWheels.length === 4) return registerWheelGroups(splitWheels);
+    if (wheelBounds.length) registerWheelGroups(wheelBounds);
+  }
+
+  function registerWheelGroups(wheelBounds) {
+    var minimumX = Infinity;
+    var maximumX = -Infinity;
+    var minimumZ = Infinity;
+    var maximumZ = -Infinity;
+    for (var boundIndex = 0; boundIndex < wheelBounds.length; boundIndex++) {
+      minimumX = Math.min(minimumX, wheelBounds[boundIndex].center.x);
+      maximumX = Math.max(maximumX, wheelBounds[boundIndex].center.x);
+      minimumZ = Math.min(minimumZ, wheelBounds[boundIndex].center.z);
+      maximumZ = Math.max(maximumZ, wheelBounds[boundIndex].center.z);
+    }
+    var centerX = (minimumX + maximumX) / 2;
+    var centerZ = (minimumZ + maximumZ) / 2;
     for (var i = 0; i < wheelBounds.length; i++) {
       var wheel = wheelBounds[i];
-      var front = i >= wheelBounds.length - Math.ceil(wheelBounds.length / 2);
-      var side = wheel.center.x < 0 ? 'L' : 'R';
-      var axle = front ? 'F' : 'R';
-      var id = 'wheel' + axle + side;
+      var front = wheel.center.z >= centerZ;
+      var side = wheel.center.x >= centerX ? 'R' : 'L';
+      var id = 'wheel' + (front ? 'F' : 'R') + side;
       if (parts[id]) continue;
-      var wheelPart = createPart(id, (front ? 'Переднее ' : 'Заднее ') + (side === 'L' ? 'левое' : 'правое') + ' колесо', [wheel.group], { hinge: 'center', wheel: true });
+      var label = (front ? 'Переднее ' : 'Заднее ') + (side === 'L' ? 'левое' : 'правое') + ' колесо';
+      var wheelPart = createPart(id, label, [wheel.group], { wheel: true, center: wheel.center });
       parts[id] = wheelPart;
       wheels.push(wheelPart);
     }
+  }
+
+  function splitTireMesh(mesh) {
+    var source = mesh.geometry;
+    var position = source.attributes.position;
+    var sourceIndex = source.index;
+    if (!position || !sourceIndex || sourceIndex.count < 12) return [];
+    mesh.updateWorldMatrix(true, false);
+    var triangles = [];
+    var minimum = new THREE.Vector3(Infinity, Infinity, Infinity);
+    var maximum = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+    for (var offset = 0; offset < sourceIndex.count; offset += 3) {
+      var indices = [sourceIndex.getX(offset), sourceIndex.getX(offset + 1), sourceIndex.getX(offset + 2)];
+      var centroid = new THREE.Vector3();
+      for (var vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
+        var vertex = new THREE.Vector3().fromBufferAttribute(position, indices[vertexIndex]);
+        mesh.localToWorld(vertex);
+        centroid.add(vertex);
+      }
+      centroid.multiplyScalar(1 / 3);
+      minimum.min(centroid);
+      maximum.max(centroid);
+      triangles.push({ indices: indices, center: centroid });
+    }
+    if (maximum.x - minimum.x < 0.05 || maximum.z - minimum.z < 0.05) return [];
+
+    var middle = new THREE.Vector3().addVectors(minimum, maximum).multiplyScalar(0.5);
+    var centers = [
+      new THREE.Vector3(minimum.x, middle.y, minimum.z),
+      new THREE.Vector3(minimum.x, middle.y, maximum.z),
+      new THREE.Vector3(maximum.x, middle.y, minimum.z),
+      new THREE.Vector3(maximum.x, middle.y, maximum.z)
+    ];
+    for (var iteration = 0; iteration < 12; iteration++) {
+      var sums = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+      var counts = [0, 0, 0, 0];
+      for (var triangleIndex = 0; triangleIndex < triangles.length; triangleIndex++) {
+        var triangle = triangles[triangleIndex];
+        var nearest = 0;
+        var nearestDistance = Infinity;
+        for (var candidateIndex = 0; candidateIndex < centers.length; candidateIndex++) {
+          var dx = triangle.center.x - centers[candidateIndex].x;
+          var dz = triangle.center.z - centers[candidateIndex].z;
+          var distance = dx * dx + dz * dz + (triangle.center.y - centers[candidateIndex].y) * (triangle.center.y - centers[candidateIndex].y) * 0.2;
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearest = candidateIndex;
+          }
+        }
+        triangle.wheelIndex = nearest;
+        sums[nearest].add(triangle.center);
+        counts[nearest]++;
+      }
+      if (counts.some(function (count) { return count < 12; })) return [];
+      centers = centers.map(function (center, index) { return sums[index].multiplyScalar(1 / counts[index]); });
+    }
+
+    var indexedGroups = [];
+    var materialGroups = source.groups.length ? source.groups : [{ start: 0, count: sourceIndex.count, materialIndex: 0 }];
+    for (var wheelIndex = 0; wheelIndex < 4; wheelIndex++) {
+      var partitions = {};
+      for (var triangleIndex = 0; triangleIndex < triangles.length; triangleIndex++) {
+        var triangle = triangles[triangleIndex];
+        if (triangle.wheelIndex !== wheelIndex) continue;
+        var materialIndex = 0;
+        for (var groupIndex = 0; groupIndex < materialGroups.length; groupIndex++) {
+          var group = materialGroups[groupIndex];
+          var triangleOffset = triangleIndex * 3;
+          if (triangleOffset >= group.start && triangleOffset < group.start + group.count) {
+            materialIndex = group.materialIndex || 0;
+            break;
+          }
+        }
+        if (!partitions[materialIndex]) partitions[materialIndex] = [];
+        partitions[materialIndex].push.apply(partitions[materialIndex], triangle.indices);
+      }
+      var geometry = new THREE.BufferGeometry();
+      for (var attributeName in source.attributes) geometry.setAttribute(attributeName, source.attributes[attributeName]);
+      geometry.morphAttributes = source.morphAttributes;
+      geometry.morphTargetsRelative = source.morphTargetsRelative;
+      var indices = [];
+      var partitionMaterials = Object.keys(partitions);
+      for (var partitionIndex = 0; partitionIndex < partitionMaterials.length; partitionIndex++) {
+        var partitionMaterial = Number(partitionMaterials[partitionIndex]);
+        var materialIndices = partitions[partitionMaterial];
+        geometry.addGroup(indices.length, materialIndices.length, partitionMaterial);
+        indices.push.apply(indices, materialIndices);
+      }
+      geometry.setIndex(indices);
+      geometry.computeBoundingBox();
+      geometry.computeBoundingSphere();
+
+      var splitMesh = mesh.clone(false);
+      splitMesh.geometry = geometry;
+      splitMesh.name = mesh.name + '_wheel_' + wheelIndex;
+      splitMesh.visible = true;
+      mesh.parent.add(splitMesh);
+      indexedGroups.push({
+        group: splitMesh,
+        center: centers[wheelIndex],
+        bounds: new THREE.Box3().setFromObject(splitMesh)
+      });
+    }
+    mesh.visible = false;
+    return indexedGroups;
   }
 
   function createPart(id, label, groups, options) {
@@ -352,19 +506,140 @@
     for (var i = 0; i < groups.length; i++) bounds.union(new THREE.Box3().setFromObject(groups[i]));
     var center = bounds.getCenter(new THREE.Vector3());
     var pivot = new THREE.Group();
-    var localHinge = center.clone();
+    var localHinge = options.center ? options.center.clone() : center.clone();
     if (options.hinge === 'maxZ') localHinge.z = bounds.max.z;
     if (options.hinge === 'minZ') localHinge.z = bounds.min.z;
     if (options.hinge === 'centerZ') localHinge.z = center.z;
     car.add(pivot);
     pivot.position.copy(car.worldToLocal(localHinge.clone()));
     for (var groupIndex = 0; groupIndex < groups.length; groupIndex++) pivot.attach(groups[groupIndex]);
-    return { id: id, label: label, groups: groups, pivot: pivot, visible: true, openable: !!options.open, direction: options.direction || 1, isOpen: false, wheel: !!options.wheel, center: center };
+    var part = {
+      id: id,
+      label: label,
+      groups: groups,
+      pivot: pivot,
+      visible: true,
+      openable: !!options.open,
+      axis: options.axis || 'x',
+      angle: options.angle || 0,
+      currentAngle: 0,
+      targetAngle: 0,
+      isOpen: false,
+      wheel: !!options.wheel,
+      wheelCenter: options.center || center,
+      basePosition: pivot.position.clone(),
+      transitionProgress: 0,
+      transitionTarget: 0,
+      transitioning: false
+    };
+    return part;
   }
 
   function setPartOpen(part, open) {
     part.isOpen = open;
-    part.pivot.rotation.x = open ? part.direction * 0.7 : 0;
+    part.targetAngle = open ? part.angle : 0;
+  }
+
+  function addMissingCarParts(model) {
+    var bounds = new THREE.Box3().setFromObject(model);
+    var size = bounds.getSize(new THREE.Vector3());
+    var center = bounds.getCenter(new THREE.Vector3());
+    var paint = material(0x263d56, 0.38, 0.42);
+    model.traverse(function (node) {
+      if (!node.isMesh) return;
+      var materials = Array.isArray(node.material) ? node.material : [node.material];
+      for (var i = 0; i < materials.length; i++) {
+        if (materials[i].color && materials[i].color.getHex() !== 0xffffff && materials[i].color.getHex() !== 0x000000) {
+          paint.color.copy(materials[i].color);
+          paint.metalness = materials[i].metalness || 0;
+          paint.roughness = materials[i].roughness || 0.5;
+          return;
+        }
+      }
+    });
+
+    if (!parts.hood) {
+        var hood = createProxyPanel('Капот', 'hood', bounds, size, center, paint, 0.68, 0.22, 0.62);
+      parts.hood = hood;
+    }
+    if (!parts.trunk) {
+      parts.trunk = createProxyPanel('Багажник', 'trunk', bounds, size, center, paint, 0.62, 0.2, -0.62);
+    }
+    if (!parts.doorL) parts.doorL = createProxyDoor('doorL', 'Левая дверь', bounds, size, center, paint, -1);
+    if (!parts.doorR) parts.doorR = createProxyDoor('doorR', 'Правая дверь', bounds, size, center, paint, 1);
+    if (!parts.engine) {
+      parts.engine = createProxyServicePart('Двигатель', 'engine', center, size, 0x343a3a, 0, 0.43, 0.32);
+    }
+    if (!parts.battery) {
+      parts.battery = createProxyServicePart('Аккумулятор', 'battery', center, size, 0x293b35, -0.2, 0.58, 0.47);
+    }
+    if (!parts.radiator) {
+      parts.radiator = createProxyServicePart('Радиатор', 'radiator', center, size, 0x697879, 0, 0.43, 0.55);
+    }
+  }
+
+  function createProxyPanel(label, id, bounds, size, center, paint, widthRatio, lengthRatio, endRatio) {
+    var group = new THREE.Group();
+    var panelWidth = size.x * widthRatio;
+    var panelLength = size.z * lengthRatio;
+    var panelHeight = Math.max(size.y * 0.025, 0.035);
+    var front = id === 'hood';
+    var panelZ = center.z + size.z * endRatio;
+    var panelY = bounds.min.y + size.y * (front ? 0.7 : 0.63);
+    var recess = box(group, panelWidth + 0.025, 0.025, panelLength + 0.025, material(0x101719, 0.85), center.x, panelY - 0.045, panelZ);
+    recess.visible = false;
+    var mesh = box(group, panelWidth, panelHeight, panelLength, paint, center.x, panelY, panelZ);
+    mesh.material = paint.clone();
+    group.position.set(0, 0, 0);
+    car.add(group);
+    var part = createPart(id, label, [group], {
+      open: true,
+      axis: 'x',
+      angle: front ? -0.72 : 0.68,
+      center: new THREE.Vector3(center.x, panelY, panelZ + (front ? -panelLength * 0.45 : panelLength * 0.45))
+    });
+    part.recess = recess;
+    return part;
+  }
+
+  function createProxyDoor(id, label, bounds, size, center, paint, side) {
+    var panelLength = size.z * 0.28;
+    var panelHeight = size.y * 0.38;
+    var hingeZ = center.z + size.z * 0.2;
+    var panelY = bounds.min.y + size.y * 0.56;
+    var sideX = center.x + side * size.x * 0.47;
+    var backing = box(car, size.x * 0.018, panelHeight * 1.04, panelLength * 1.04, material(0x111719, 0.86), sideX, panelY, hingeZ - panelLength / 2);
+    backing.name = id + '_door_recess';
+    backing.visible = false;
+    backing.position.x = sideX;
+
+    var pivot = new THREE.Group();
+    car.add(pivot);
+    pivot.position.set(sideX, panelY, hingeZ);
+    var door = box(pivot, size.x * 0.022, panelHeight, panelLength, paint.clone(), side * size.x * 0.012, 0, -panelLength / 2);
+    door.name = id + '_door_panel';
+    var part = createPart(id, label, [pivot], {
+      open: true,
+      axis: 'y',
+      angle: side * -0.9,
+      center: pivot.position.clone()
+    });
+    part.recess = backing;
+    return part;
+  }
+
+  function createProxyServicePart(label, id, center, size, color, xRatio, yRatio, zRatio) {
+    var group = new THREE.Group();
+    var position = new THREE.Vector3(center.x + size.x * xRatio, center.y - size.y * 0.5 + size.y * yRatio, center.z + size.z * zRatio);
+    var width = size.x * (id === 'engine' ? 0.32 : 0.14);
+    var length = size.z * (id === 'engine' ? 0.26 : 0.12);
+    var height = size.y * (id === 'engine' ? 0.16 : 0.12);
+    box(group, width, height, length, material(color, 0.65, 0.24), position.x, position.y, position.z);
+    if (id === 'engine') {
+      box(group, width * 0.45, height * 0.55, length * 0.62, material(0x667170, 0.5, 0.35), position.x, position.y + height * 0.7, position.z);
+    }
+    car.add(group);
+    return createPart(id, label, [group], { center: position });
   }
 
   function buildWorkshop() {
@@ -383,6 +658,13 @@
     for (i = 0; i < choices.length; i++) choices[i].addEventListener('click', startGame);
     var modes = document.querySelectorAll('.mode-button');
     for (i = 0; i < modes.length; i++) modes[i].addEventListener('click', setMode);
+    var gears = document.querySelectorAll('.gear-button');
+    for (i = 0; i < gears.length; i++) gears[i].addEventListener('click', selectGear);
+    document.getElementById('ignition-button').addEventListener('click', function () {
+      engineRunning = !engineRunning;
+      if (!engineRunning) speed = 0;
+      document.getElementById('ignition-button').textContent = engineRunning ? 'ЗАГЛУШИТЬ' : 'ЗАВЕСТИ';
+    });
     document.getElementById('car-selector').addEventListener('change', function (event) {
       loadCarModel(event.currentTarget.value);
     });
@@ -477,14 +759,29 @@
     var i;
     for (i = 0; i < buttons.length; i++) buttons[i].classList.toggle('is-active', buttons[i].getAttribute('data-mode') === mode);
     document.getElementById('workshop-panel').classList.toggle('is-collapsed', driving);
+    document.getElementById('drive-controls').classList.toggle('is-hidden', !driving);
     document.getElementById('top-status-text').textContent = driving ? 'СВОБОДНЫЙ ЗАЕЗД' : 'РАБОТА В ГАРАЖЕ';
     if (!driving) speed = 0;
+  }
+
+  function selectGear(event) {
+    if (Math.abs(speed) > 1) {
+      showToast('Остановись перед переключением передачи');
+      return;
+    }
+    selectedGear = event.currentTarget.getAttribute('data-gear');
+    var buttons = document.querySelectorAll('.gear-button');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].classList.toggle('is-active', buttons[i] === event.currentTarget);
+    }
+    document.getElementById('gear-value').textContent = selectedGear;
   }
 
   function pressControl(event) {
     event.preventDefault();
     var control = event.currentTarget.getAttribute('data-control');
     touchState[control] = true;
+    event.currentTarget.classList.add('is-pressed');
     if (control === 'gas') {
       gasPressedAt = Date.now();
       touchState.gasTap = false;
@@ -496,6 +793,7 @@
   function releaseControl(event) {
     var control = event.currentTarget.getAttribute('data-control');
     touchState[control] = false;
+    event.currentTarget.classList.remove('is-pressed');
     if (control === 'gas' && Date.now() - gasPressedAt < 180) {
       touchState.gasTap = true;
       gasTapTimer = window.setTimeout(function () { touchState.gasTap = false; }, 700);
@@ -503,7 +801,7 @@
   }
 
   function updatePartsPanel() {
-    var order = ['hood', 'trunk', 'doors', 'engine', 'battery', 'radiator', 'wheelFL', 'wheelFR', 'wheelRL', 'wheelRR', 'wheelSet'];
+    var order = ['hood', 'trunk', 'doorL', 'doorR', 'engine', 'battery', 'radiator', 'wheelFL', 'wheelFR', 'wheelRL', 'wheelRR', 'wheelSet'];
     var list = document.getElementById('parts-list');
     var ids = [];
     for (var orderIndex = 0; orderIndex < order.length; orderIndex++) {
@@ -521,14 +819,7 @@
     }
     list.innerHTML = html || '<p class="parts-empty">В этой GLB-модели кузовные детали объединены и отдельно не размечены.</p>';
     document.getElementById('part-count').textContent = ids.length + ' ДЕТАЛЕЙ';
-    var unavailable = [];
-    if (!parts.hood) unavailable.push('капот');
-    if (!parts.doors) unavailable.push('двери');
-    if (!parts.trunk) unavailable.push('багажник');
-    if (parts.wheelSet || wheels.length !== 4) unavailable.push('раздельный поворот каждого колеса');
-    document.getElementById('parts-hint').textContent = unavailable.length
-      ? 'Недоступно в этой GLB: ' + unavailable.join(', ') + '.'
-      : 'Нажми «Открыть», чтобы открыть кузовную деталь, или сними и установи её.';
+    document.getElementById('parts-hint').textContent = 'Открой кузовную деталь, затем сними её. Установи новую — все действия анимированы.';
     var condition = ids.length ? Math.round(ready / ids.length * 100) : 100;
     document.getElementById('condition-value').textContent = condition + '%';
     document.getElementById('condition-bar').style.width = condition + '%';
@@ -542,10 +833,22 @@
     var id = event.currentTarget.getAttribute('data-part');
     var object = parts[id];
     if (!object) return;
+    var installing = !object.visible;
     object.visible = !object.visible;
-    object.pivot.visible = object.visible;
-    if (!object.visible) setPartOpen(object, false);
-    if (object.wheel && speed > 0) speed = 0;
+    object.pivot.visible = true;
+    if (installing && !object.transitioning) {
+      object.transitionProgress = 1;
+      object.pivot.position.copy(object.basePosition);
+      object.pivot.position.y -= 0.65;
+      object.pivot.scale.setScalar(0.18);
+    }
+    object.transitionTarget = object.visible ? 0 : 1;
+    object.transitioning = true;
+    if (!object.visible) {
+      setPartOpen(object, false);
+      if (object.recess) object.recess.visible = false;
+    }
+    if (object.wheel && Math.abs(speed) > 0) speed = 0;
     updatePartsPanel();
     showToast(object.label + (object.visible ? ' установлена' : ' снята'));
   }
@@ -554,6 +857,7 @@
     var object = parts[event.currentTarget.getAttribute('data-open-part')];
     if (!object || !object.visible) return;
     setPartOpen(object, !object.isOpen);
+    if (object.recess) object.recess.visible = object.isOpen;
     updatePartsPanel();
     showToast(object.label + (object.isOpen ? ' открыта' : ' закрыта'));
   }
@@ -587,16 +891,48 @@
     camera.lookAt(cameraTarget);
   }
 
+  function updatePartAnimations(delta) {
+    for (var id in parts) {
+      var part = parts[id];
+      if (part.openable) {
+        var difference = part.targetAngle - part.currentAngle;
+        part.currentAngle += difference * Math.min(1, delta * 5);
+        if (Math.abs(difference) < 0.002) part.currentAngle = part.targetAngle;
+        part.pivot.rotation[part.axis] = part.currentAngle;
+      }
+      if (part.transitioning) {
+        var transitionDifference = part.transitionTarget - part.transitionProgress;
+        part.transitionProgress += transitionDifference * Math.min(1, delta * 5);
+        if (Math.abs(transitionDifference) < 0.015) {
+          part.transitionProgress = part.transitionTarget;
+          part.transitioning = false;
+        }
+        var lift = Math.sin(part.transitionProgress * Math.PI / 2);
+        part.pivot.position.copy(part.basePosition);
+        part.pivot.position.y -= lift * 0.65;
+        part.pivot.scale.setScalar(1 - lift * 0.82);
+        if (!part.transitioning && part.transitionTarget === 1) {
+          part.pivot.visible = false;
+          part.pivot.position.copy(part.basePosition);
+          part.pivot.scale.setScalar(1);
+        }
+      }
+    }
+  }
+
   function updateDriving(delta) {
     if (!driving) {
       speed = 0;
       return;
     }
-    var forward = keyState.keyw || keyState.arrowup || touchState.gas || touchState.gasTap;
-    var reverse = keyState.keys || keyState.arrowdown;
+    var forward = engineRunning && (selectedGear === 'D') && (keyState.keyw || keyState.arrowup || touchState.gas || touchState.gasTap);
+    var reverse = engineRunning && selectedGear === 'R' && (keyState.keys || keyState.arrowdown || touchState.reverse || touchState.gas);
     var brake = keyState.space || touchState.brake;
-    var left = keyState.keya || keyState.arrowleft || touchState.left || touchState.swipeLeft || mouseSteering < -0.12;
-    var right = keyState.keyd || keyState.arrowright || touchState.right || touchState.swipeRight || mouseSteering > 0.12;
+    var left = keyState.keya || keyState.arrowleft || touchState.left || touchState.swipeLeft;
+    var right = keyState.keyd || keyState.arrowright || touchState.right || touchState.swipeRight;
+    var targetSteering = (right ? 1 : 0) - (left ? 1 : 0);
+    if (selectedGear !== 'P' && !left && !right && Math.abs(mouseSteering) > 0.08) targetSteering = mouseSteering;
+    steering += (targetSteering - steering) * Math.min(1, delta * 8);
     var ready = true;
     var wheelPartIds = ['wheelFL', 'wheelFR', 'wheelRL', 'wheelRR', 'wheelSet'];
     for (var partIndex = 0; partIndex < wheelPartIds.length; partIndex++) {
@@ -607,33 +943,37 @@
       reverse = false;
       speed = 0;
     }
-    if (forward) speed += 38 * delta;
-    else if (reverse) speed -= 26 * delta;
-    else speed *= Math.max(0, 1 - delta * 0.8);
-    if (brake) speed *= Math.max(0, 1 - delta * 5.5);
-    speed = Math.max(-18, Math.min(76, speed));
-    if ((left || right) && Math.abs(speed) > 0.7) heading += (right ? 1 : -1) * delta * Math.min(1.1, Math.abs(speed) / 12) * (speed < 0 ? -1 : 1);
-    var steeringAngle = left ? -0.32 : (right ? 0.32 : 0);
+    if (!engineRunning || selectedGear === 'P') speed *= Math.max(0, 1 - delta * 9);
+    else if (forward) speed = Math.min(68, speed + 20 * delta);
+    else if (reverse) speed = Math.max(-22, speed - 14 * delta);
+    else if (selectedGear === 'N') speed *= Math.max(0, 1 - delta * 0.55);
+    else speed *= Math.max(0, 1 - delta * 1.8);
+    if (brake) speed = Math.abs(speed) < 3 ? 0 : speed - Math.sign(speed) * 45 * delta;
+    speed = Math.max(-22, Math.min(68, speed));
+    if (Math.abs(speed) > 0.5) heading += steering * Math.min(1.35, Math.abs(speed) / 18) * delta * (speed < 0 ? -1 : 1);
+    var steeringAngle = steering * -0.42;
     if (parts.wheelFL) parts.wheelFL.pivot.rotation.y = steeringAngle;
     if (parts.wheelFR) parts.wheelFR.pivot.rotation.y = steeringAngle;
-    var travel = speed * delta * 0.14;
+    if (parts.wheelSet) parts.wheelSet.pivot.rotation.y = steeringAngle;
+    var travel = speed * delta * 0.095;
     car.position.x += Math.sin(heading) * travel;
     car.position.z += Math.cos(heading) * travel;
     car.rotation.y = heading;
     distance += Math.abs(travel);
     var wheelIndex;
     for (wheelIndex = 0; wheelIndex < wheels.length; wheelIndex++) {
-      if (wheels[wheelIndex].visible) wheels[wheelIndex].pivot.rotation.x += travel / 0.39;
+      if (wheels[wheelIndex].visible) wheels[wheelIndex].pivot.rotation.x += travel / 0.34;
     }
     document.getElementById('speed-value').textContent = ('0' + Math.round(Math.abs(speed))).slice(-2);
-    document.getElementById('gear-value').textContent = Math.abs(speed) < 0.5 ? 'N' : (speed < 0 ? 'R' : (speed < 15 ? '1' : speed < 27 ? '2' : '3'));
-    document.getElementById('top-status-text').textContent = 'СВОБОДНЫЙ ЗАЕЗД';
+    document.getElementById('gear-value').textContent = selectedGear;
+    document.getElementById('top-status-text').textContent = engineRunning ? 'ДВИГАТЕЛЬ ВКЛЮЧЁН' : 'ДВИГАТЕЛЬ ВЫКЛЮЧЕН';
   }
 
   function animate() {
     requestAnimationFrame(animate);
     var delta = Math.min(clock.getDelta(), 0.25);
     updateDriving(delta);
+    updatePartAnimations(delta);
     updateCamera(delta);
     renderer.render(scene, camera);
   }
