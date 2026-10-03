@@ -1,0 +1,48 @@
+{
+  "name": "motornaya",
+  "version": "1.0.0",
+  "private": true,
+  "description": "3D-симулятор автомеханика",
+  "author": "Моторная",
+  "main": "electron-main.js",
+  "scripts": {
+    "prepare": "npm run build:site",
+    "start": "electron .",
+    "build:win": "electron-builder --win nsis --x64",
+    "build:site": "node scripts/build-site.js",
+    "check": "node --check game.js && node --check electron-main.js && node --check scripts/build-site.js"
+  },
+  "dependencies": {
+    "three": "0.128.0"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.motornaya.game",
+    "productName": "Моторная",
+    "asar": true,
+    "files": [
+      "index.html",
+      "game.js",
+      "styles.css",
+      "car-model.glb",
+      "assets/**",
+      "vendor/**",
+      "electron-main.js",
+      "package.json"
+    ],
+    "artifactName": "Motornaya-Setup.${ext}",
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Моторная"
+    }
+  }
+}

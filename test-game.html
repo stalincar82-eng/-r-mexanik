@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Моторная — тест загрузки</title>
+  <style>
+    body { font-family: monospace; background: #101816; color: #d9f36a; padding: 20px; }
+    .section { margin: 20px 0; border-left: 3px solid #d9f36a; padding-left: 15px; }
+    .ok { color: #00ff00; }
+    .error { color: #ff3333; }
+    h1 { color: #d9f36a; }
+    code { background: #1a1a1a; padding: 2px 5px; }
+  </style>
+</head>
+<body>
+  <h1>🎮 Моторная — тест загрузки</h1>
+  
+  <div class="section">
+    <h2>Проверка ресурсов</h2>
+    <div id="resources"></div>
+  </div>
+  
+  <div class="section">
+    <h2>Проверка 3D</h2>
+    <div id="threejs"></div>
+  </div>
+  
+  <div class="section">
+    <h2>Проверка модели</h2>
+    <div id="model"></div>
+  </div>
+  
+  <div class="section">
+    <h2>Результат</h2>
+    <div id="result"></div>
+  </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/GLTFLoader.min.js"></script>
+  
+  <script>
+    function addLog(containerId, msg, ok = true) {
+      const div = document.createElement('div');
+      div.className = ok ? 'ok' : 'error';
+      div.textContent = (ok ? '✓ ' : '✗ ') + msg;
+      document.getElementById(containerId).appendChild(div);
+    }
+    
+    // Check resources
+    fetch('car-model.glb', { method: 'HEAD' })
+      .then(r => {
+        if (r.ok) {
+          addLog('resources', 'car-model.glb найден (' + (r.headers.get('content-length') / 1024 / 1024).toFixed(1) + ' MB)');
+        } else {
+          addLog('resources', 'car-model.glb не найден', false);
+        }
+      })
+      .catch(e => addLog('resources', 'Ошибка проверки: ' + e.message, false));
+    
+    fetch('game.js', { method: 'HEAD' })
+      .then(r => {
+        if (r.ok) addLog('resources', 'game.js найден');
+        else addLog('resources', 'game.js не найден', false);
+      });
+    
+    fetch('styles.css', { method: 'HEAD' })
+      .then(r => {
+        if (r.ok) addLog('resources', 'styles.css найден');
+        else addLog('resources', 'styles.css не найден', false);
+      });
+    
+    // Check THREE.js
+    if (window.THREE) {
+      addLog('threejs', 'THREE.js загружен');
+      if (window.THREE.GLTFLoader) {
+        addLog('threejs', 'GLTFLoader доступен');
+      } else {
+        addLog('threejs', 'GLTFLoader недоступен', false);
+      }
+    } else {
+      addLog('threejs', 'THREE.js не загружен', false);
+    }
+    
+    // Check model
+    const loader = new THREE.GLTFLoader();
+    loader.load('car-model.glb',
+      function(gltf) {
+        addLog('model', 'Модель загружена успешно');
+        
+        const scene = gltf.scene;
+        let meshCount = 0;
+        let wheelCount = 0;
+        
+        scene.traverse(function(node) {
+          if (node.isMesh) meshCount++;
+          if (node.name && node.name.toLowerCase().includes('wheel')) wheelCount++;
+        });
+        
+        addLog('model', 'Меш элементов: ' + meshCount);
+        addLog('model', 'Обнаружено колёс: ' + wheelCount);
+      },
+      function(progress) {
+        // Progress
+      },
+      function(error) {
+        addLog('model', 'Ошибка загрузки модели: ' + error.message, false);
+      }
+    );
+    
+    // Final result
+    setTimeout(function() {
+      const resources = document.getElementById('resources').children.length;
+      const threejs = document.getElementById('threejs').children.length;
+      const model = document.getElementById('model').children.length;
+      
+      if (resources > 0 && threejs > 0) {
+        addLog('result', 'Готово! Перейди на главную страницу');
+      }
+    }, 2000);
+  </script>
+</body>
+</html>

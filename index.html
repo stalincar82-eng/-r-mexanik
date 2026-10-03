@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#101816">
+  <title>Моторная — городская автомастерская</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/GLTFLoader.js"></script>
+  <script defer src="game.js"></script>
+</head>
+<body>
+  <main id="game" class="game-shell">
+    <div id="scene" class="scene" aria-label="Трёхмерный город и автомобиль"></div>
+    <div class="scene-grain" aria-hidden="true"></div>
+
+    <section id="start-screen" class="start-screen">
+      <div class="start-topline"><span class="brand-mark">М</span><span>МОТОРНАЯ <i> / </i> ОТКРЫТЫЙ ГОРОД</span></div>
+      <div class="start-content">
+        <p class="eyebrow"><span class="live-dot"></span>3D АВТОМАСТЕРСКАЯ · СВОБОДНЫЙ ЗАЕЗД</p>
+        <h1>Начать <em>игру.</em></h1>
+        <p class="intro-copy">Выбери автомобиль, выезжай в город и проверь его в движении или в мастерской.</p>
+        <div class="device-prompt">ВЫБЕРИ УСТРОЙСТВО</div>
+        <div class="device-options">
+          <button class="device-choice" data-device="desktop" type="button">
+            <span class="device-icon desktop-icon" aria-hidden="true"></span>
+            <span class="choice-copy"><strong>ИГРАТЬ НА ПК</strong><small>Клавиатура · мышь</small></span>
+            <span class="choice-arrow" aria-hidden="true">↗</span>
+          </button>
+          <button class="device-choice" data-device="mobile" type="button">
+            <span class="device-icon mobile-icon" aria-hidden="true"></span>
+            <span class="choice-copy"><strong>ИГРАТЬ НА ТЕЛЕФОНЕ</strong><small>Сенсорное управление</small></span>
+            <span class="choice-arrow" aria-hidden="true">↗</span>
+          </button>
+        </div>
+        <a class="installer-download" href="https://github.com/stalincar82-eng/-r-mexanik/releases/download/latest/Motornaya-Setup.exe">СКАЧАТЬ ДЛЯ WINDOWS · EXE</a>
+        <p class="compat-note">Для игры нужен браузер с поддержкой WebGL.</p>
+      </div>
+      <div class="start-footer"><span>БЕСПЛАТНАЯ БРАУЗЕРНАЯ ДЕМО</span><span>BUILD 01 / 2026</span></div>
+    </section>
+
+    <section id="game-ui" class="game-ui is-hidden" aria-label="Игровой интерфейс">
+      <header class="topbar">
+        <div class="mini-brand"><span class="brand-mark">М</span><span>МОТОРНАЯ<small>BMW M3 GTR</small></span></div>
+        <label class="car-choice-label" for="car-selector">АВТОМОБИЛЬ
+          <select id="car-selector" class="car-selector" aria-label="Выбрать автомобиль">
+            <option value="bmw">BMW M3 GTR</option>
+            <option value="volvo">Volvo S60 R · 2004</option>
+            <option value="audi">Audi S4 · 2006</option>
+          </select>
+        </label>
+        <nav class="mode-switch" aria-label="Режим игры">
+          <button class="mode-button is-active" data-mode="drive" type="button"><span class="mode-symbol">↗</span>Ехать</button>
+          <button class="mode-button" data-mode="workshop" type="button"><span class="mode-symbol">⌁</span>Гараж</button>
+        </nav>
+        <div class="top-status"><span class="status-light"></span><span id="top-status-text">МАШИНА ГОТОВА</span><button id="exit-button" class="icon-button" type="button" title="На стартовый экран" aria-label="На стартовый экран">×</button></div>
+      </header>
+
+      <div class="drive-readout">
+        <span class="readout-label">СКОРОСТЬ</span>
+        <strong id="speed-value">00</strong><span class="speed-unit">км/ч</span>
+        <span class="readout-divider"></span>
+        <span class="gear-label">ПЕРЕДАЧА</span><strong id="gear-value">D</strong>
+        <nav class="gear-selector" aria-label="Передача">
+          <button class="gear-button" data-gear="P" type="button">P</button>
+          <button class="gear-button" data-gear="R" type="button">R</button>
+          <button class="gear-button" data-gear="N" type="button">N</button>
+          <button class="gear-button is-active" data-gear="D" type="button">D</button>
+        </nav>
+        <button id="ignition-button" class="ignition-button" type="button">ЗАГЛУШИТЬ</button>
+      </div>
+
+      <aside id="workshop-panel" class="workshop-panel" aria-label="Список деталей">
+        <div class="panel-heading"><div><p class="eyebrow">МАСТЕРСКАЯ / 01</p><h2>Узлы машины</h2></div><span id="part-count" class="part-count">9 ДЕТАЛЕЙ</span></div>
+        <p id="parts-hint" class="panel-hint">Нажми на деталь, чтобы снять или установить её.</p>
+        <div id="parts-list" class="parts-list"></div>
+        <div class="condition-block"><div class="condition-label"><span>ГОТОВНОСТЬ К ПОЕЗДКЕ</span><strong id="condition-value">100%</strong></div><div class="condition-track"><span id="condition-bar"></span></div></div>
+      </aside>
+
+      <div class="drive-hint"><span class="hint-key">W A S D</span><span>движение</span><span class="hint-separator">·</span><span class="hint-key">МЫШЬ</span><span>поворот · потяни для обзора</span></div>
+      <div id="mobile-controls" class="mobile-controls" aria-label="Сенсорное управление">
+        <div class="steer-pad"><button data-control="left" type="button" aria-label="Повернуть налево">←</button><button data-control="right" type="button" aria-label="Повернуть направо">→</button></div>
+        <div class="pedal-pad"><button class="brake-control" data-control="brake" type="button">ТОРМОЗ</button><button class="gas-control" data-control="gas" type="button">ГАЗ <span>↑</span></button></div>
+      </div>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <div class="corner-note"><span class="corner-cross">+</span> <span id="car-caption">BMW M3 GTR</span> · 08:42</div>
+    </section>
+
+    <div id="webgl-warning" class="warning-screen is-hidden" role="alert">
+      <span class="warning-icon">!</span><h2>3D-сцена недоступна</h2>
+      <p id="warning-copy">Включи аппаратное ускорение и поддержку WebGL в браузере.</p>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,170 @@
+:root {
+  color-scheme: dark;
+  --ink: #e9eee9;
+  --muted: #9aa7a0;
+  --panel: rgba(17, 25, 22, .91);
+  --line: rgba(222, 239, 226, .13);
+  --acid: #d9f36a;
+  --red: #ee2635;
+}
+
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #17211d; }
+body { color: var(--ink); font-family: 'Manrope', 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
+button { color: inherit; font: inherit; }
+.game-shell { position: relative; width: 100%; height: 100%; overflow: hidden; background: #a9b8a8; }
+.scene { position: absolute; inset: 0; }
+.scene canvas { display: block; width: 100%; height: 100%; }
+.scene canvas { cursor: crosshair; touch-action: none; }
+.scene-grain { position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: .13; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E"); mix-blend-mode: soft-light; }
+.is-hidden { display: none !important; }
+
+.start-screen { position: absolute; z-index: 3; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 24px 4.5vw; background: linear-gradient(90deg, rgba(13,20,17,.94) 0%, rgba(14,21,17,.83) 34%, rgba(14,21,17,.28) 72%, rgba(14,21,17,.18) 100%), linear-gradient(0deg, rgba(13,20,17,.45), transparent 38%); animation: screen-in .65s ease-out both; }
+.start-topline, .start-footer { display: flex; align-items: center; justify-content: space-between; color: #d3ddd4; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; }
+.start-topline { justify-content: flex-start; gap: 12px; }
+.start-topline i { color: var(--acid); font-style: normal; padding: 0 5px; }
+.brand-mark { display: inline-grid; flex: 0 0 auto; width: 34px; height: 34px; place-items: center; color: #17211d; background: var(--acid); font-family: 'Barlow Condensed', sans-serif; font-size: 23px; font-weight: 800; }
+.start-content { width: min(440px, 100%); margin: auto 0; padding: 16px 0; }
+.eyebrow { margin: 0; color: var(--acid); font-size: 10px; font-weight: 800; letter-spacing: 1.35px; }
+.live-dot, .status-light { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--acid); box-shadow: 0 0 12px rgba(217,243,106,.6); }
+h1 { margin: 14px 0 22px; font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: clamp(54px, 7vw, 76px); font-weight: 700; line-height: .92; }
+h1 em { color: var(--acid); font-style: normal; }
+.intro-copy { max-width: 355px; margin: 20px 0 34px; color: #c2cdc3; font-size: 14px; line-height: 1.7; }
+.device-prompt { margin: 0 0 10px; color: #c3d0c5; font-size: 10px; font-weight: 800; letter-spacing: 1.2px; }
+.device-options { display: grid; gap: 10px; }
+.device-choice { display: flex; align-items: center; width: 100%; min-height: 76px; padding: 12px 16px; border: 1px solid rgba(222,239,226,.3); text-align: left; background: rgba(28,39,33,.92); cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.device-choice:first-child { border-color: var(--acid); color: #17211d; background: var(--acid); }
+.device-choice:first-child .device-icon, .device-choice:first-child .choice-arrow { color: #17211d; }
+.device-choice:first-child .choice-copy small { color: #39462c; }
+.device-choice:hover, .device-choice:focus-visible { transform: translateX(4px); border-color: var(--acid); background: rgba(42,55,45,.95); outline: none; }
+.installer-download { display: inline-block; margin-top: 13px; padding: 9px 11px; border: 1px solid rgba(217,243,106,.42); color: var(--acid); background: rgba(17,25,22,.68); font-size: 9px; font-weight: 800; letter-spacing: .7px; text-decoration: none; }
+.installer-download:hover, .installer-download:focus-visible { color: #152015; background: var(--acid); outline: none; }
+.device-icon { position: relative; display: block; flex: 0 0 auto; width: 34px; height: 34px; margin-right: 14px; color: var(--acid); }
+.desktop-icon:before { position: absolute; top: 3px; left: 3px; width: 24px; height: 17px; border: 1.5px solid currentColor; content: ''; }
+.desktop-icon:after { position: absolute; top: 22px; left: 8px; width: 15px; height: 5px; border-top: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; content: ''; }
+.mobile-icon:before { position: absolute; top: 1px; left: 8px; width: 16px; height: 29px; border: 1.5px solid currentColor; border-radius: 3px; content: ''; }
+.mobile-icon:after { position: absolute; bottom: 3px; left: 15px; width: 3px; height: 3px; border-radius: 50%; background: currentColor; content: ''; }
+.choice-copy { display: grid; gap: 4px; }
+.choice-copy strong { font-size: 13px; font-weight: 800; }
+.choice-copy small { color: #96a39a; font-size: 10px; }
+.choice-arrow { margin-left: auto; color: var(--acid); font-size: 18px; }
+.compat-note { margin: 12px 0 0; color: #829087; font-size: 9px; }
+.start-footer { color: #8e9a91; font-size: 9px; }
+
+.game-ui { position: absolute; z-index: 2; inset: 0; pointer-events: none; }
+.topbar { position: absolute; top: 0; right: 0; left: 0; display: flex; height: 72px; align-items: center; justify-content: space-between; padding: 0 28px; border-bottom: 1px solid rgba(255,255,255,.11); background: linear-gradient(180deg, rgba(13,20,17,.82), rgba(13,20,17,.48)); pointer-events: auto; }
+.mini-brand { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 800; letter-spacing: 1px; }
+.mini-brand .brand-mark { width: 30px; height: 30px; font-size: 20px; }
+.mini-brand small { display: block; margin-top: 2px; color: #a6b2a8; font-size: 8px; font-weight: 600; letter-spacing: 1px; }
+.car-choice-label { position: absolute; left: calc(50% - 350px); display: grid; gap: 3px; color: #a9b5ab; font-size: 7px; font-weight: 800; letter-spacing: .8px; }
+.car-selector { min-width: 170px; padding: 7px 25px 7px 9px; border: 1px solid rgba(255,255,255,.22); color: var(--ink); background: rgba(17,25,22,.92); font: inherit; font-size: 10px; letter-spacing: 0; cursor: pointer; }
+.car-selector option { color: var(--ink); background: #111916; }
+.mode-switch { position: absolute; left: 50%; display: flex; padding: 4px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.17); background: rgba(16,24,20,.73); }
+.mode-button { min-height: 35px; padding: 0 14px; border: 0; color: #acb8ae; background: transparent; font-size: 11px; font-weight: 700; cursor: pointer; }
+.mode-button.is-active { color: #1a2117; background: var(--acid); }
+.mode-symbol { margin-right: 6px; font-size: 14px; }
+.top-status { display: flex; align-items: center; color: #d3ded4; font-size: 9px; font-weight: 800; letter-spacing: 1px; }
+.top-status .status-light { width: 6px; height: 6px; }
+.icon-button { display: grid; width: 32px; height: 32px; margin-left: 15px; place-items: center; border: 1px solid rgba(255,255,255,.22); color: #d7e0d8; background: transparent; font-size: 20px; cursor: pointer; }
+.icon-button:hover { border-color: var(--acid); color: var(--acid); }
+.drive-readout { position: absolute; top: 94px; left: 28px; display: flex; align-items: baseline; gap: 8px; padding: 12px 15px; border-left: 2px solid var(--acid); background: rgba(17,25,22,.8); }
+.readout-label, .gear-label { align-self: center; color: #a9b5ab; font-size: 8px; font-weight: 800; letter-spacing: 1px; }
+.drive-readout strong { font-family: 'Barlow Condensed', sans-serif; font-size: 35px; line-height: 1; }
+.speed-unit { color: #a9b5ab; font-size: 9px; }
+.readout-divider { width: 1px; height: 25px; margin: 0 5px; background: rgba(255,255,255,.2); }
+.drive-readout #gear-value { color: var(--acid); font-size: 23px; }
+.gear-selector { display: flex; gap: 2px; margin-left: 5px; }
+.gear-button { width: 24px; height: 24px; border: 1px solid rgba(255,255,255,.16); color: #9aa79e; background: rgba(255,255,255,.04); font-size: 9px; cursor: pointer; }
+.gear-button.is-active { border-color: var(--acid); color: #152015; background: var(--acid); }
+.ignition-button { margin-left: 6px; padding: 7px 8px; border: 1px solid rgba(217,243,106,.4); color: var(--acid); background: transparent; font-size: 8px; font-weight: 800; letter-spacing: .6px; cursor: pointer; }
+.workshop-panel { position: absolute; top: 93px; right: 25px; width: min(340px, 30vw); max-height: calc(100% - 185px); padding: 18px; overflow: auto; border: 1px solid rgba(224,239,226,.16); background: var(--panel); box-shadow: 0 18px 55px rgba(0,0,0,.25); pointer-events: auto; transition: opacity .2s ease, transform .2s ease; }
+.workshop-panel.is-collapsed { opacity: 0; transform: translateX(12px); pointer-events: none; }
+.panel-heading { display: flex; align-items: end; justify-content: space-between; gap: 10px; }
+.panel-heading .eyebrow { font-size: 8px; }
+.panel-heading h2 { margin: 5px 0 0; font-family: 'Barlow Condensed', sans-serif; font-size: 27px; font-weight: 600; }
+.part-count { padding: 5px 7px; color: #b8c5ba; background: rgba(255,255,255,.08); font-size: 8px; font-weight: 800; white-space: nowrap; }
+.panel-hint { margin: 10px 0 14px; color: #95a39a; font-size: 10px; line-height: 1.5; }
+.parts-list { display: grid; gap: 6px; }
+.part-row { display: grid; grid-template-columns: 27px minmax(0,1fr) auto; align-items: center; gap: 8px; min-height: 48px; padding: 6px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.035); }
+.part-row.is-removed { opacity: .62; }
+.part-indicator { color: var(--acid); font-family: 'Barlow Condensed', sans-serif; font-size: 15px; }
+.part-name { font-size: 10px; font-weight: 700; }
+.part-state { display: block; margin-top: 2px; color: #89968d; font-size: 8px; font-weight: 500; }
+.part-action { padding: 6px 7px; border: 1px solid rgba(217,243,106,.35); color: var(--acid); background: transparent; font-size: 8px; font-weight: 800; cursor: pointer; }
+.part-action:hover { color: #152015; background: var(--acid); }
+.parts-empty { margin: 4px 0; color: #a9b5ab; font-size: 10px; line-height: 1.6; }
+.condition-block { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.condition-label { display: flex; justify-content: space-between; color: #a9b5ab; font-size: 8px; font-weight: 800; letter-spacing: .4px; }
+.condition-label strong { color: var(--acid); }
+.condition-track { height: 4px; margin-top: 8px; background: rgba(255,255,255,.12); }
+.condition-track span { display: block; width: 100%; height: 100%; background: var(--acid); transition: width .2s ease; }
+.drive-hint { position: absolute; bottom: 25px; left: 28px; display: flex; align-items: center; gap: 9px; padding: 10px 13px; color: #c8d2ca; background: rgba(17,25,22,.76); font-size: 9px; pointer-events: auto; }
+.hint-key { padding: 5px 6px; border: 1px solid rgba(255,255,255,.17); color: #f3f5ed; font-size: 8px; font-weight: 800; letter-spacing: .4px; }
+.hint-separator { color: #728077; }
+.corner-note { position: absolute; right: 27px; bottom: 27px; color: rgba(230,237,230,.74); font-size: 8px; font-weight: 800; letter-spacing: 1px; }
+.corner-cross { margin-right: 7px; color: var(--acid); }
+.toast { position: absolute; left: 50%; bottom: 75px; padding: 10px 16px; transform: translate(-50%, 8px); opacity: 0; border: 1px solid var(--line); background: rgba(17,25,22,.92); color: var(--ink); font-size: 11px; transition: opacity .18s ease, transform .18s ease; }
+.toast.is-visible { transform: translate(-50%, 0); opacity: 1; }
+.mobile-controls { display: none; }
+.warning-screen { position: absolute; z-index: 5; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: rgba(12,17,15,.94); text-align: center; }
+.warning-screen h2 { margin: 12px 0 5px; font-family: 'Barlow Condensed', sans-serif; font-size: 32px; }
+.warning-screen p { max-width: 440px; color: #aab6ac; font-size: 13px; line-height: 1.6; }
+.warning-icon { display: grid; width: 40px; height: 40px; place-items: center; border: 1px solid var(--acid); color: var(--acid); font-size: 22px; }
+
+@keyframes screen-in { from { opacity: 0; } to { opacity: 1; } }
+
+@media (max-width: 900px) {
+  .workshop-panel { right: 16px; width: min(320px, 40vw); }
+  .car-choice-label { left: 24%; }
+  .mode-switch { left: 62%; }
+  .drive-readout { left: 16px; gap: 5px; }
+  .readout-label, .gear-label { font-size: 7px; }
+  .ignition-button { display: none; }
+  .topbar { padding: 0 16px; }
+  .top-status { font-size: 8px; }
+}
+
+@media (max-width: 700px) {
+  .start-screen { padding: 18px 20px; background: linear-gradient(90deg, rgba(13,20,17,.92), rgba(13,20,17,.61)), linear-gradient(0deg, rgba(13,20,17,.6), transparent 50%); }
+  .start-content { margin: auto 0; }
+  .start-footer { font-size: 7px; letter-spacing: .7px; }
+  .topbar { height: 60px; padding: 0 12px; }
+  .mini-brand { gap: 7px; font-size: 9px; }
+  .mini-brand .brand-mark { width: 26px; height: 26px; font-size: 17px; }
+  .mini-brand small { font-size: 7px; }
+  .car-choice-label { top: 66px; right: 12px; left: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .car-selector { min-width: 0; width: 68%; height: 31px; }
+  .mode-switch { top: 105px; left: 50%; }
+  .mode-button { min-height: 31px; padding: 0 11px; font-size: 10px; }
+  .top-status { font-size: 0; }
+  .top-status .status-light { margin-right: 0; }
+  .icon-button { width: 28px; height: 28px; margin-left: 9px; }
+  .drive-readout { top: 151px; left: 12px; flex-wrap: wrap; max-width: calc(100% - 24px); padding: 9px 10px; }
+  .drive-readout strong { font-size: 29px; }
+  .readout-divider { height: 20px; margin: 0 2px; }
+  .gear-selector { margin-left: 0; }
+  .gear-button { width: 22px; height: 22px; }
+  .workshop-panel { top: auto; right: 10px; bottom: 74px; left: 10px; width: auto; max-height: 42vh; padding: 12px; }
+  .panel-heading h2 { font-size: 23px; }
+  .parts-list { grid-template-columns: 1fr 1fr; gap: 5px; }
+  .part-row { grid-template-columns: 20px minmax(0,1fr); min-height: 48px; gap: 5px; }
+  .part-action { grid-column: 2; justify-self: start; padding: 4px 6px; }
+  .part-state { display: inline; margin-left: 4px; }
+  .drive-hint { display: none; }
+  .corner-note { right: 12px; bottom: 13px; font-size: 7px; }
+  .device-mobile .mobile-controls { position: absolute; right: 18px; bottom: 40px; left: 18px; display: flex; justify-content: space-between; align-items: end; pointer-events: auto; }
+  .steer-pad, .pedal-pad { display: flex; align-items: end; gap: 8px; }
+  .mobile-controls button { min-width: 54px; min-height: 54px; border: 1px solid rgba(255,255,255,.34); border-radius: 50%; color: white; background: rgba(17,25,22,.64); font-size: 20px; touch-action: none; }
+  .mobile-controls button:active { border-color: var(--acid); background: rgba(217,243,106,.25); }
+  .mobile-controls .brake-control, .mobile-controls .gas-control { min-width: 62px; min-height: 62px; font-size: 9px; font-weight: 800; }
+  .mobile-controls .gas-control { border-color: rgba(217,243,106,.7); color: var(--acid); }
+  .mobile-controls .gas-control span { font-size: 16px; }
+  .device-desktop .mobile-controls { display: none; }
+}
+
+@media (max-width: 380px) {
+  .readout-label, .gear-label { display: none; }
+  .drive-readout { gap: 6px; }
+  .part-name { font-size: 9px; }
+  .topbar .mini-brand span:nth-child(2) { letter-spacing: .4px; }
+}
