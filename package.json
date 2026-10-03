@@ -8,7 +8,7 @@
   "scripts": {
     "prepare": "npm run build:site",
     "start": "electron .",
-    "build:win": "electron-builder --win nsis --x64",
+    "build:win": "electron-builder --win nsis --x64 --publish never",
     "build:site": "node scripts/build-site.js",
     "check": "node --check game.js && node --check electron-main.js && node --check scripts/build-site.js"
   },
