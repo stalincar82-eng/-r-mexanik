@@ -80,20 +80,36 @@
   updateCamera(1);
   animate();
 
-  function requestLandscape() {
+  function lockOrientation(type) {
     try {
       if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').catch(function () { showToast('Браузер не разрешил поворот экрана'); });
-      } else { showToast('Поворот экрана не поддерживается браузером'); }
-    } catch (error) { showToast('Поворот экрана не поддерживается браузером'); }
+        return screen.orientation.lock(type);
+      }
+    } catch (error) {}
+    return Promise.reject(new Error('orientation-lock-unsupported'));
+  }
+
+  function requestLandscape() {
+    lockOrientation('landscape').catch(function () {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().then(function () {
+          return lockOrientation('landscape');
+        }).catch(function () {
+          showToast('Поверни телефон горизонтально');
+        });
+      } else {
+        showToast('Поверни телефон горизонтально');
+      }
+    });
   }
 
   function requestPortrait() {
-    try {
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('portrait').catch(function () { showToast('Браузер не разрешил поворот экрана'); });
-      } else { showToast('Поворот экрана не поддерживается браузером'); }
-    } catch (error) { showToast('Поворот экрана не поддерживается браузером'); }
+    lockOrientation('portrait').catch(function () {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(function () {});
+      }
+      showToast('Поверни телефон вертикально');
+    });
   }
 
   function toggleOrientation() {
