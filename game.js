@@ -367,6 +367,29 @@
       }
     }
 
+    /* Prefer actual tire geometry first. Some GLB files contain a large parent node
+       named "wheel" that also owns body panels; rotating that parent makes the bumper spin. */
+    var tireMeshes = [];
+    model.traverse(function (node) {
+      var nodeNames = node.name || '';
+      var ancestor = node.parent;
+      while (ancestor && ancestor !== model) {
+        nodeNames += ' ' + (ancestor.name || '');
+        ancestor = ancestor.parent;
+      }
+      if (node.isMesh && /tire|tyre/i.test(nodeNames) && !/brake|hub|steering/i.test(nodeNames)) tireMeshes.push(node);
+    });
+    var splitWheels = [];
+    for (var meshIndex = 0; meshIndex < tireMeshes.length; meshIndex++) {
+      splitWheels = splitTireMesh(tireMeshes[meshIndex]);
+      if (splitWheels.length === 4) break;
+    }
+    if (splitWheels.length === 4) {
+      registerWheelGroups(splitWheels);
+      attachWheelAccessories(model);
+      return;
+    }
+
     var wheelGroups = [];
     for (var wheelIndex = 0; wheelIndex < candidates.length; wheelIndex++) {
       var wheelGroup = candidates[wheelIndex];
@@ -390,33 +413,10 @@
       attachWheelAccessories(model);
       return;
     }
-
-    var tireMeshes = [];
-    model.traverse(function (node) {
-      var nodeNames = node.name;
-      var ancestor = node.parent;
-      while (ancestor && ancestor !== model) {
-        nodeNames += ' ' + ancestor.name;
-        ancestor = ancestor.parent;
-      }
-      if (node.isMesh && /tire|tyre/i.test(nodeNames) && !/brake|hub|steering/i.test(nodeNames)) tireMeshes.push(node);
-    });
-    var splitWheels = [];
-    for (var meshIndex = 0; meshIndex < tireMeshes.length; meshIndex++) {
-      splitWheels = splitTireMesh(tireMeshes[meshIndex]);
-      if (splitWheels.length === 4) break;
-    }
-    if (splitWheels.length === 4) {
-      registerWheelGroups(splitWheels);
-      attachWheelAccessories(model);
-      return;
-    }
     if (wheelBounds.length) {
       registerWheelGroups(wheelBounds);
       attachWheelAccessories(model);
     }
-  }
-
   function registerWheelGroups(wheelBounds) {
     var minimumX = Infinity;
     var maximumX = -Infinity;
@@ -462,79 +462,52 @@
   }
 
   function attachWheelAccessories(model) {
-    /* Rims/discs in some GLB files have generic node names, so name matching alone
-       misses them. Find independent meshes by their actual position around each wheel axle. */
+    /* Only pick a true rim/disc: it must be very close to the axle and have two
+       nearly equal large dimensions (the circular face). This intentionally avoids
+       broad body panels such as bumpers and headlights. */
     var wheelRoots = [];
     for (var rootIndex = 0; rootIndex < wheels.length; rootIndex++) {
-      var wheelPartRoot = wheels[rootIndex];
-      var rootGroup = wheelPartRoot.groups && wheelPartRoot.groups[0];
+      var rootGroup = wheels[rootIndex].groups && wheels[rootIndex].groups[0];
       if (rootGroup) wheelRoots.push(rootGroup);
     }
-
     var meshes = [];
     model.traverse(function (node) {
       if (!node.isMesh) return;
-      if (/steering|wheelhouse/i.test(node.name || '')) return;
-
-      var alreadyInWheel = false;
-      for (var wheelRootIndex = 0; wheelRootIndex < wheelRoots.length; wheelRootIndex++) {
-        var root = wheelRoots[wheelRootIndex];
-        if (root === node || root.getObjectById(node.id)) {
-          alreadyInWheel = true;
-          break;
-        }
+      if (/steering|wheelhouse|brake|hub/i.test(node.name || '')) return;
+      var insideWheel = false;
+      for (var i = 0; i < wheelRoots.length; i++) {
+        if (wheelRoots[i] === node || wheelRoots[i].getObjectById(node.id)) { insideWheel = true; break; }
       }
-      if (alreadyInWheel) return;
-
+      if (insideWheel) return;
       var bounds = new THREE.Box3().setFromObject(node);
       if (bounds.isEmpty()) return;
-      var size = bounds.getSize(new THREE.Vector3());
-      var center = bounds.getCenter(new THREE.Vector3());
-      meshes.push({ mesh: node, bounds: bounds, size: size, center: center });
+      meshes.push({ mesh: node, center: bounds.getCenter(new THREE.Vector3()), size: bounds.getSize(new THREE.Vector3()) });
     });
 
     for (var meshIndex = 0; meshIndex < meshes.length; meshIndex++) {
       var item = meshes[meshIndex];
-      var nearest = null;
-      var nearestScore = Infinity;
-
+      var best = null;
+      var bestScore = Infinity;
       for (var wheelIndex = 0; wheelIndex < wheels.length; wheelIndex++) {
-        var wheelPart = wheels[wheelIndex];
-        var axis = wheelPart.wheelSpinAxisVector || new THREE.Vector3(1, 0, 0);
-        axis = axis.clone().normalize();
-        var delta = item.center.clone().sub(wheelPart.wheelCenter);
-        var axialDistance = Math.abs(delta.dot(axis));
-        var radialVector = delta.clone().sub(axis.clone().multiplyScalar(delta.dot(axis)));
-        var radialDistance = radialVector.length();
-        var wheelSize = wheelPart.wheelRadius || 0.45;
-        var largest = Math.max(item.size.x, item.size.y, item.size.z);
-        var smallest = Math.min(item.size.x, item.size.y, item.size.z);
-
-        /* A rim/disc is centered on the axle, while body/suspension geometry is
-           usually farther away or much larger. Use both spatial and size filters. */
-        var radialLimit = wheelSize * 0.55;
-        var axialLimit = wheelSize * 1.15;
-        var sizeLimit = wheelSize * 2.35;
-        var dimensions = [item.size.x, item.size.y, item.size.z].sort(function (a, b) { return b - a; });
-        var roundness = dimensions[0] / Math.max(dimensions[1], 0.001);
-        var discLike = dimensions[1] >= wheelSize * 0.72 &&
-          dimensions[0] <= sizeLimit &&
-          roundness <= 1.55 &&
-          smallest <= wheelSize * 0.75;
-        var score = radialDistance / Math.max(wheelSize, 0.01) + axialDistance / Math.max(wheelSize, 0.01);
-
-        if (radialDistance <= radialLimit &&
-            axialDistance <= axialLimit &&
-            discLike &&
-            score < nearestScore) {
-          nearestScore = score;
-          nearest = wheelPart;
+        var wheel = wheels[wheelIndex];
+        var axis = (wheel.wheelSpinAxisVector || new THREE.Vector3(1, 0, 0)).clone().normalize();
+        var delta = item.center.clone().sub(wheel.wheelCenter);
+        var axial = Math.abs(delta.dot(axis));
+        var radial = delta.clone().sub(axis.clone().multiplyScalar(delta.dot(axis))).length();
+        var radius = wheel.wheelRadius || 0.45;
+        var dims = [item.size.x, item.size.y, item.size.z].sort(function(a,b){ return b-a; });
+        var roundness = dims[0] / Math.max(dims[1], 0.001);
+        var discLike = dims[1] >= radius * 0.95 &&
+          dims[0] <= radius * 2.25 &&
+          roundness <= 1.28 &&
+          dims[2] <= radius * 0.42;
+        var score = radial / radius + axial / radius;
+        if (radial <= radius * 0.30 && axial <= radius * 0.55 && discLike && score < bestScore) {
+          bestScore = score;
+          best = wheel;
         }
       }
-
-      if (nearest) {
-        (nearest.spinPivot || nearest.pivot).attach(item.mesh);
-      }
+      if (best) (best.spinPivot || best.pivot).attach(item.mesh);
     }
   }
 
