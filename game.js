@@ -385,7 +385,11 @@
       var bounds = new THREE.Box3().setFromObject(group);
       return { group: group, bounds: bounds, center: bounds.getCenter(new THREE.Vector3()) };
     }).sort(function (a, b) { return a.center.z - b.center.z; });
-    if (wheelBounds.length === 4) return registerWheelGroups(wheelBounds);
+    if (wheelBounds.length === 4) {
+      registerWheelGroups(wheelBounds);
+      attachWheelAccessories(model);
+      return;
+    }
 
     var tireMeshes = [];
     model.traverse(function (node) {
@@ -402,8 +406,15 @@
       splitWheels = splitTireMesh(tireMeshes[meshIndex]);
       if (splitWheels.length === 4) break;
     }
-    if (splitWheels.length === 4) return registerWheelGroups(splitWheels);
-    if (wheelBounds.length) registerWheelGroups(wheelBounds);
+    if (splitWheels.length === 4) {
+      registerWheelGroups(splitWheels);
+      attachWheelAccessories(model);
+      return;
+    }
+    if (wheelBounds.length) {
+      registerWheelGroups(wheelBounds);
+      attachWheelAccessories(model);
+    }
   }
 
   function registerWheelGroups(wheelBounds) {
@@ -429,7 +440,43 @@
       var wheelPart = createPart(id, label, [wheel.group], { wheel: true, center: wheel.center });
       wheelPart.pivot.rotation.order = 'YXZ';
       parts[id] = wheelPart;
+      wheelPart.wheelSpinAxisVector = getWheelSpinAxis(wheel.bounds);
+      parts[id] = wheelPart;
       wheels.push(wheelPart);
+    }
+  }
+
+  function getWheelSpinAxis(bounds) {
+    var size = new THREE.Vector3();
+    bounds.getSize(size);
+    var axis = new THREE.Vector3(1, 0, 0);
+    if (size.y <= size.x && size.y <= size.z) axis.set(0, 1, 0);
+    else if (size.z <= size.x && size.z <= size.y) axis.set(0, 0, 1);
+    return axis.normalize();
+  }
+
+  function attachWheelAccessories(model) {
+    var accessories = [];
+    model.traverse(function (node) {
+      if (!node.isMesh || !node.name) return;
+      if (!/rim|alloy|disc|wheel[_ .-]?cap|hub[_ .-]?cap/i.test(node.name)) return;
+      if (/steering|wheelhouse/i.test(node.name)) return;
+      accessories.push(node);
+    });
+    for (var i = 0; i < accessories.length; i++) {
+      var mesh = accessories[i];
+      var worldCenter = new THREE.Box3().setFromObject(mesh).getCenter(new THREE.Vector3());
+      var nearest = null;
+      var nearestDistance = Infinity;
+      for (var j = 0; j < wheels.length; j++) {
+        var wheelPart = wheels[j];
+        var d = worldCenter.distanceTo(wheelPart.wheelCenter);
+        if (d < nearestDistance) {
+          nearestDistance = d;
+          nearest = wheelPart;
+        }
+      }
+      if (nearest && nearestDistance < 1.2) nearest.pivot.attach(mesh);
     }
   }
 
@@ -566,10 +613,9 @@
       wheelCenter: options.center || center,
       wheelSpinAxis: (function () {
         if (!options.wheel) return 'x';
-        var size = new THREE.Vector3();
-        bounds.getSize(size);
-        if (size.x <= size.y && size.x <= size.z) return 'x';
-        if (size.z <= size.x && size.z <= size.y) return 'z';
+        var axis = getWheelSpinAxis(bounds);
+        if (axis.x) return 'x';
+        if (axis.z) return 'z';
         return 'y';
       })(),
       basePosition: pivot.position.clone(),
@@ -930,9 +976,8 @@
       var wheelPart = wheels[wheelIndex];
       if (!wheelPart.visible) continue;
       var spin = travel / 0.34;
-      if (wheelPart.wheelSpinAxis === 'z') wheelPart.pivot.rotation.z += spin;
-      else if (wheelPart.wheelSpinAxis === 'y') wheelPart.pivot.rotation.y += spin;
-      else wheelPart.pivot.rotation.x += spin;
+      var spinAxis = wheelPart.wheelSpinAxisVector || new THREE.Vector3(1, 0, 0);
+      wheelPart.pivot.rotateOnAxis(spinAxis, spin);
     }
     document.getElementById('speed-value').textContent = ('0' + Math.round(Math.abs(speed))).slice(-2);
     document.getElementById('gear-value').textContent = selectedGear;
