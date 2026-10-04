@@ -309,8 +309,12 @@ body.force-landscape .car-selector {
   height: 30px;
 }
 body.force-landscape .mode-switch {
-  top: 94px;
+  position: absolute;
+  top: auto;
+  bottom: 10px;
   left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
 }
 body.force-landscape .drive-readout {
   top: 58px;
