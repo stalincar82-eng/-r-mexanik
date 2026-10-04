@@ -475,7 +475,8 @@
     var meshes = [];
     model.traverse(function (node) {
       if (!node.isMesh) return;
-      if (/steering|wheelhouse|brake|hub/i.test(node.name || '')) return;
+      var nodeName = node.name || '';
+      if (/steering|wheelhouse|brake|caliper|headlight|lamp|light|bumper|fender|grille|body|hood|bonnet|door|window|mirror|chassis/i.test(nodeName)) return;
       var insideWheel = false;
       for (var i = 0; i < wheelRoots.length; i++) {
         if (wheelRoots[i] === node || wheelRoots[i].getObjectById(node.id)) { insideWheel = true; break; }
@@ -490,7 +491,7 @@
       var item = meshes[meshIndex];
       var itemName = item.mesh.name || '';
       var namedDisc = /rim|wheel[_ -]?disc|disc[_ -]?wheel|disk|alloy|hubcap/i.test(itemName) &&
-        !/brake|caliper|steering|wheelhouse/i.test(itemName);
+        !/brake|caliper|steering|wheelhouse|headlight|lamp|light|bumper|fender|grille|body/i.test(itemName);
       var best = null;
       var bestScore = Infinity;
       for (var wheelIndex = 0; wheelIndex < wheels.length; wheelIndex++) {
@@ -506,8 +507,8 @@
           dims[0] <= radius * 2.8 &&
           roundness <= 1.55 &&
           dims[2] <= radius * 0.65;
-        var closeEnough = radial <= radius * (namedDisc ? 0.72 : 0.48) &&
-          axial <= radius * (namedDisc ? 0.9 : 0.68);
+        var closeEnough = radial <= radius * (namedDisc ? 0.48 : 0.28) &&
+          axial <= radius * (namedDisc ? 0.68 : 0.48);
         var score = radial / radius + axial / radius + (namedDisc ? -0.5 : 0);
         if (closeEnough && discLike && score < bestScore) {
           bestScore = score;
