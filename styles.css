@@ -220,3 +220,10 @@ h1 em { color: var(--acid); font-style: normal; }
   .drive-controls .drive-control{border-radius:15px}
   .steer-pad .steer-control{height:70px;min-height:70px}
 }
+
+/* Phones in landscape can be wider than 700px. Keep PC keyboard hints hidden on touch devices. */
+@media (pointer: coarse) and (max-height: 600px) {
+  .drive-hint { display: none !important; }
+  .desktop-help { display: none !important; }
+  .mobile-help { display: grid !important; }
+}
