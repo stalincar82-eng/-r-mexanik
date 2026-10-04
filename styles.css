@@ -231,31 +231,29 @@ h1 em { color: var(--acid); font-style: normal; }
 
 
 
-/* Mobile uses the phone's normal landscape orientation. No CSS rotation or fake landscape frame. */
+/* On a portrait phone, render the game itself horizontally inside the vertical screen. */
 body.device-mobile #game {
-  width: 100%;
-  height: 100%;
+  width: 100dvh;
+  height: 100dvw;
   max-width: none;
   max-height: none;
-  aspect-ratio: auto;
+  aspect-ratio: 16 / 9;
 }
 
-/* If the phone is still upright, clearly ask the player to turn it sideways. */
 @media (orientation: portrait) and (pointer: coarse) {
-  body.device-mobile::after {
-    content: 'ПОВЕРНИТЕ ТЕЛЕФОН ГОРИЗОНТАЛЬНО';
+  body.device-mobile #game {
     position: fixed;
-    z-index: 100;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background: #0b110f;
-    color: var(--acid);
-    font-size: 18px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
-    text-align: center;
+    top: 50%;
+    left: 50%;
+    width: 100dvh;
+    height: 100dvw;
+    transform: translate(-50%, -50%) rotate(90deg);
+    transform-origin: center center;
+  }
+
+  body.device-mobile #game .scene,
+  body.device-mobile #game .game-ui {
+    width: 100%;
+    height: 100%;
   }
 }
