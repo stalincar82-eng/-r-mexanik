@@ -337,37 +337,54 @@ body.force-landscape .drive-controls {
   right: 8px;
   bottom: 6px;
   width: auto;
-  min-height: 62px;
-  padding: 5px;
-  gap: 7px;
+  min-height: 48px;
+  padding: 0;
+  gap: 8px;
+  background: transparent;
+  border: 0;
 }
 body.force-landscape .steer-pad,
 body.force-landscape .pedal-pad {
   gap: 5px;
 }
 body.force-landscape .drive-controls .drive-control {
-  height: 44px;
-  min-height: 44px;
-  font-size: 13px;
+  height: 36px;
+  min-height: 36px;
+  min-width: 36px;
+  width: 36px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.35);
+  background: rgba(12,18,15,.72);
+  box-shadow: none;
+  font-size: 18px;
 }
 body.force-landscape .steer-pad .steer-control {
-  height: 44px;
-  min-height: 44px;
-  font-size: 23px;
+  height: 36px;
+  min-height: 36px;
+  width: 36px;
+  font-size: 20px;
 }
 body.force-landscape .pedal-pad .reverse-control,
 body.force-landscape .pedal-pad .brake-control {
-  height: 34px;
-  min-height: 34px;
-  font-size: 8px;
+  height: 27px;
+  min-height: 27px;
+  width: 42px;
+  min-width: 42px;
+  padding: 0 4px;
+  border-radius: 5px;
+  font-size: 7px;
 }
 body.force-landscape .pedal-pad .gas-control {
-  height: 44px;
-  min-height: 44px;
-  font-size: 11px;
+  height: 36px;
+  min-height: 36px;
+  width: 54px;
+  min-width: 54px;
+  border-radius: 6px;
+  font-size: 8px;
 }
 body.force-landscape .drive-controls .gas-control span {
-  font-size: 13px;
+  font-size: 11px;
 }
 body.force-landscape .toast {
   bottom: 96px;
