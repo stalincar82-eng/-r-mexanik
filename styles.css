@@ -31,28 +31,102 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
 .game-ui:has(.mode-button[data-mode="workshop"].is-active) .drive-readout { display: none !important; }
 .game-ui:has(.mode-button[data-mode="workshop"].is-active) .drive-controls { display: none !important; }
 
-/* Compact driving telemetry. */
-.drive-readout { transform: scale(.72); transform-origin: left top; gap: 4px !important; padding: 6px 8px !important; min-height: 36px !important; }
-.drive-readout strong { font-size: 24px !important; line-height: 1 !important; }
-.gear-selector { gap: 1px !important; }
-.gear-button { width: 20px !important; height: 20px !important; font-size: 8px !important; }
-.ignition-button { margin-left: 3px !important; padding: 5px !important; font-size: 7px !important; }
-.drive-controls { left: 12px !important; right: 12px !important; bottom: 10px !important; }
-.drive-control { min-width: 48px !important; height: 44px !important; font-size: 10px !important; }
-.gas-control { min-width: 58px !important; }
+/* Driving HUD: gear/speed stays at the bottom center like a racing game. */
+.drive-readout {
+  top: auto !important;
+  left: 50% !important;
+  bottom: 14px !important;
+  transform: translateX(-50%) !important;
+  transform-origin: center bottom !important;
+  z-index: 50 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  min-height: 58px !important;
+  padding: 8px 12px !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  border-left: 3px solid #d9f36a !important;
+  border-radius: 12px !important;
+  background: rgba(9,14,12,.88) !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,.28) !important;
+}
+.drive-readout strong { font-size: 28px !important; line-height: 1 !important; min-width: 62px; text-align: right; }
+.gear-selector { display: flex !important; gap: 4px !important; }
+.gear-button {
+  width: 34px !important;
+  height: 34px !important;
+  border: 1px solid rgba(255,255,255,.2) !important;
+  border-radius: 7px !important;
+  background: rgba(255,255,255,.06) !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+}
+.gear-button.is-active { border-color: #d9f36a !important; color: #152015 !important; background: #d9f36a !important; }
+.ignition-button { margin-left: 4px !important; padding: 8px 10px !important; border-radius: 7px !important; font-size: 9px !important; }
+
+/* Large, comfortable touch controls: steering on the left, pedals on the right. */
+.drive-controls {
+  left: 18px !important;
+  right: 18px !important;
+  bottom: 18px !important;
+  align-items: end !important;
+  z-index: 45 !important;
+  pointer-events: none !important;
+}
+.steer-pad, .pedal-pad { gap: 10px !important; pointer-events: auto !important; }
+.drive-control {
+  min-width: 72px !important;
+  width: 72px !important;
+  height: 66px !important;
+  border: 1px solid rgba(255,255,255,.24) !important;
+  border-radius: 14px !important;
+  background: rgba(12,18,15,.84) !important;
+  box-shadow: 0 7px 20px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.07) !important;
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  touch-action: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+.drive-control:active { transform: translateY(2px) scale(.97); background: rgba(35,46,39,.95) !important; }
+.gas-control {
+  min-width: 92px !important;
+  width: 92px !important;
+  height: 76px !important;
+  border-radius: 16px !important;
+  border-color: #d9f36a !important;
+  color: #17211d !important;
+  background: #d9f36a !important;
+  font-size: 18px !important;
+}
+
 .workshop-panel { max-height: calc(100% - 150px) !important; }
+
 @media (max-width: 700px) {
-  .drive-readout { top: 58px !important; left: 8px !important; transform: scale(.62); }
-  .drive-controls { left: 8px !important; right: 8px !important; bottom: 8px !important; }
-  .drive-control { min-width: 44px !important; height: 40px !important; }
-  .gas-control { min-width: 54px !important; }
+  .drive-readout {
+    left: 50% !important;
+    bottom: 10px !important;
+    transform: translateX(-50%) !important;
+    gap: 7px !important;
+    min-height: 52px !important;
+    padding: 6px 9px !important;
+    border-radius: 11px !important;
+  }
+  .drive-readout strong { font-size: 24px !important; min-width: 54px; }
+  .gear-button { width: 30px !important; height: 30px !important; font-size: 10px !important; }
+  .ignition-button { padding: 7px 8px !important; font-size: 8px !important; }
+  .drive-controls { left: 9px !important; right: 9px !important; bottom: 8px !important; }
+  .steer-pad, .pedal-pad { gap: 8px !important; }
+  .drive-control { min-width: 64px !important; width: 64px !important; height: 60px !important; border-radius: 13px !important; font-size: 15px !important; }
+  .gas-control { min-width: 82px !important; width: 82px !important; height: 68px !important; font-size: 17px !important; }
   .workshop-panel { top: 58px !important; right: 8px !important; width: min(285px, calc(100% - 16px)) !important; max-height: calc(100% - 125px) !important; padding: 12px !important; }
   .part-row { min-height: 40px !important; padding: 5px !important; font-size: 10px !important; }
 }
+
 @media (orientation: landscape) and (max-height: 600px) {
-  .drive-readout { bottom: 7px !important; top: auto !important; left: 50% !important; transform: translateX(-50%) scale(.64) !important; transform-origin: center bottom; }
-  .drive-controls { bottom: 7px !important; }
-  .drive-control { min-width: 42px !important; height: 38px !important; }
-  .gas-control { min-width: 52px !important; }
+  .drive-readout { top: auto !important; bottom: 8px !important; left: 50% !important; transform: translateX(-50%) !important; }
+  .drive-controls { bottom: 8px !important; }
+  .drive-control { min-width: 62px !important; width: 62px !important; height: 56px !important; }
+  .gas-control { min-width: 78px !important; width: 78px !important; height: 62px !important; }
   .workshop-panel { top: 58px !important; right: 8px !important; width: 270px !important; max-height: calc(100% - 112px) !important; padding: 10px !important; }
 }
