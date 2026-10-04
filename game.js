@@ -592,6 +592,8 @@
     for (i = 0; i < controls.length; i++) {
       controls[i].addEventListener('contextmenu', preventControlMenu);
       controls[i].addEventListener('selectstart', preventControlMenu);
+      controls[i].addEventListener('dragstart', preventControlMenu);
+      controls[i].addEventListener('touchstart', preventControlMenu, { passive: false });
       controls[i].addEventListener('pointerdown', pressControl);
       controls[i].addEventListener('pointerup', releaseControl);
       controls[i].addEventListener('pointerleave', releaseControl);
