@@ -83,9 +83,23 @@
   function requestLandscape() {
     try {
       if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').catch(function () {});
-      }
-    } catch (error) {}
+        screen.orientation.lock('landscape').catch(function () { showToast('Браузер не разрешил поворот экрана'); });
+      } else { showToast('Поворот экрана не поддерживается браузером'); }
+    } catch (error) { showToast('Поворот экрана не поддерживается браузером'); }
+  }
+
+  function requestPortrait() {
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('portrait').catch(function () { showToast('Браузер не разрешил поворот экрана'); });
+      } else { showToast('Поворот экрана не поддерживается браузером'); }
+    } catch (error) { showToast('Поворот экрана не поддерживается браузером'); }
+  }
+
+  function toggleOrientation() {
+    var type = screen.orientation && screen.orientation.type ? screen.orientation.type : '';
+    if (type.indexOf('landscape') === 0) requestPortrait();
+    else requestLandscape();
   }
 
   function showWarning(message) {
@@ -577,6 +591,7 @@
     document.getElementById('car-selector').addEventListener('change', function (event) {
       loadCarModel(event.currentTarget.value);
     });
+    document.getElementById('orientation-button').addEventListener('click', toggleOrientation);
     document.getElementById('help-button').addEventListener('click', function () {
       document.getElementById('help-panel').classList.toggle('is-hidden');
     });
