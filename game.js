@@ -507,10 +507,11 @@
           dims[0] <= radius * 2.8 &&
           roundness <= 1.55 &&
           dims[2] <= radius * 0.65;
-        var closeEnough = radial <= radius * (namedDisc ? 0.48 : 0.28) &&
-          axial <= radius * (namedDisc ? 0.68 : 0.48);
-        var score = radial / radius + axial / radius + (namedDisc ? -0.5 : 0);
-        if (closeEnough && discLike && score < bestScore) {
+        var closeEnough = radial <= radius * (namedDisc ? 0.95 : 0.28) &&
+          axial <= radius * (namedDisc ? 1.05 : 0.48);
+        var validShape = namedDisc || discLike;
+        var score = radial / radius + axial / radius + (namedDisc ? -2 : 0);
+        if (closeEnough && validShape && score < bestScore) {
           bestScore = score;
           best = wheel;
         }
