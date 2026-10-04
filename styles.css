@@ -355,7 +355,7 @@ body.force-landscape .steer-pad {
 body.force-landscape .pedal-pad {
   position: absolute;
   right: 10px;
-  top: 10px;
+  bottom: 10px;
   display: grid;
   grid-template-columns: 96px 96px;
   grid-template-rows: 64px 88px;
