@@ -80,42 +80,28 @@
   updateCamera(1);
   animate();
 
-  function lockOrientation(type) {
-    try {
-      if (screen.orientation && screen.orientation.lock) {
-        return screen.orientation.lock(type);
-      }
-    } catch (error) {}
-    return Promise.reject(new Error('orientation-lock-unsupported'));
-  }
-
-  function requestLandscape() {
-    lockOrientation('landscape').catch(function () {
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().then(function () {
-          return lockOrientation('landscape');
-        }).catch(function () {
-          showToast('Поверни телефон горизонтально');
-        });
-      } else {
-        showToast('Поверни телефон горизонтально');
-      }
-    });
-  }
-
-  function requestPortrait() {
-    lockOrientation('portrait').catch(function () {
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(function () {});
-      }
-      showToast('Поверни телефон вертикально');
-    });
+  function setLandscapeLayout(enabled) {
+    document.body.classList.toggle('force-landscape', enabled);
+    var button = document.getElementById('orientation-button');
+    if (button) {
+      button.textContent = enabled ? '↻ ВЕРНУТЬ ВЕРТИКАЛЬНЫЙ ВИД' : '↻ ВКЛЮЧИТЬ ГОРИЗОНТАЛЬНЫЙ ВИД';
+      button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    }
+    window.setTimeout(resize, 80);
+    window.setTimeout(resize, 350);
+    showToast(enabled ? 'Горизонтальный вид включён' : 'Вертикальный вид включён');
   }
 
   function toggleOrientation() {
-    var type = screen.orientation && screen.orientation.type ? screen.orientation.type : '';
-    if (type.indexOf('landscape') === 0) requestPortrait();
-    else requestLandscape();
+    setLandscapeLayout(!document.body.classList.contains('force-landscape'));
+  }
+
+  function requestLandscape() {
+    setLandscapeLayout(true);
+  }
+
+  function requestPortrait() {
+    setLandscapeLayout(false);
   }
 
   function showWarning(message) {
