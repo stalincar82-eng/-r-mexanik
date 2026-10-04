@@ -794,7 +794,7 @@
   }
 
   function updateCamera(delta) {
-    var mobile = window.innerWidth <= 700;
+    var mobile = document.body.classList.contains('device-mobile') || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
     cameraTarget.set(car.position.x, mobile ? 0.5 : 0.65, car.position.z);
     var cameraHeading = heading + 0.32 + cameraOrbit;
     var offsetX = driving ? Math.sin(cameraHeading) * 5.2 : 7;
