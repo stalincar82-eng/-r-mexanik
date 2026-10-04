@@ -22,6 +22,20 @@ button { color: inherit; font: inherit; }
 .scene-grain { position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: .13; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E"); mix-blend-mode: soft-light; }
 .is-hidden { display: none !important; }
 
+/* App-style landscape fallback for phones that do not allow browser orientation lock. */
+body.force-landscape { overflow: hidden; }
+body.force-landscape > #game {
+  position: fixed;
+  width: 100vh;
+  height: 100vw;
+  left: calc((100vw - 100vh) / 2);
+  top: calc((100vh - 100vw) / 2);
+  transform: rotate(90deg);
+  transform-origin: center center;
+}
+body.force-landscape .start-screen { overflow: hidden; }
+body.force-landscape .orientation-button { display: none; }
+
 /* Landscape phones: keep the initial device picker inside the short viewport. */
 .start-screen { overflow-y: auto; overflow-x: hidden; }
 @media (orientation: landscape) and (max-height: 600px) {
