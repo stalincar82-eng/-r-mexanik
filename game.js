@@ -73,8 +73,11 @@
   buildWorkshop();
   bindInterface();
   updatePartsPanel();
-  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) requestLandscape();
-updateCamera(1);
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+    device = 'mobile';
+    document.body.classList.add('device-mobile');
+  }
+  updateCamera(1);
   animate();
 
   function showWarning(message) {
@@ -650,19 +653,9 @@ updateCamera(1);
     return aliases[key] || key;
   }
 
-  function requestLandscape() {
-    try {
-      if (screen.orientation && screen.orientation.lock) {
-        var p = screen.orientation.lock('landscape');
-        if (p && p.catch) p.catch(function(){});
-      }
-    } catch (e) {}
-  }
-
   function startGame(event) {
     device = event.currentTarget.getAttribute('data-device');
     document.body.classList.toggle('device-mobile', device === 'mobile');
-    if (device === 'mobile') requestLandscape();
     document.getElementById('start-screen').classList.add('is-hidden');
     document.getElementById('game-ui').classList.remove('is-hidden');
     document.getElementById('workshop-panel').classList.add('is-collapsed');
