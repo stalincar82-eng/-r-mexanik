@@ -358,8 +358,8 @@ body.force-landscape .drive-controls .drive-control {
   width: 88px;
   padding: 0;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,.38);
-  background: rgba(12,18,15,.82);
+  border: 1px solid rgba(255,255,255,.32);
+  background: rgba(12,18,15,.66);
   box-shadow: none;
   font-size: 42px;
 }
@@ -368,6 +368,7 @@ body.force-landscape .steer-pad .steer-control {
   min-height: 88px;
   width: 88px;
   font-size: 46px;
+  background: rgba(12,18,15,.58);
 }
 body.force-landscape .pedal-pad .reverse-control,
 body.force-landscape .pedal-pad .brake-control {
@@ -378,6 +379,7 @@ body.force-landscape .pedal-pad .brake-control {
   padding: 0 6px;
   border-radius: 8px;
   font-size: 12px;
+  background: rgba(12,18,15,.70);
 }
 body.force-landscape .pedal-pad .gas-control {
   height: 88px;
@@ -386,6 +388,8 @@ body.force-landscape .pedal-pad .gas-control {
   min-width: 124px;
   border-radius: 10px;
   font-size: 14px;
+  color: #17211d;
+  background: rgba(217,243,106,.78);
 }
 body.force-landscape .drive-controls .gas-control span {
   font-size: 24px;
