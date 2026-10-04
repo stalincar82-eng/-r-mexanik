@@ -51,7 +51,6 @@ body.force-landscape > #game > .game-shell {
     height: 100vw;
   }
 }
-body.force-landscape .orientation-button { display: none; }
 
 /* Landscape phones: keep the initial device picker inside the short viewport. */
 .start-screen { overflow-y: auto; overflow-x: hidden; }
