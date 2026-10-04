@@ -260,9 +260,9 @@ body.device-mobile .start-footer { font-size: 8px; }
 body.device-mobile .topbar { height: 58px; padding: 0 18px; }
 body.device-mobile .mini-brand .brand-mark { width: 28px; height: 28px; font-size: 18px; }
 body.device-mobile .mini-brand small { display: none; }
-body.device-mobile .car-choice-label { top: 10px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 8px; }
-body.device-mobile .car-selector { width: 180px; min-width: 180px; height: 34px; padding: 5px 20px 5px 8px; }
-body.device-mobile .mode-switch { top: 10px; left: auto; right: 118px; transform: none; }
+body.device-mobile .car-choice-label { top: 4px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 8px; }
+body.device-mobile .car-selector { width: 180px; min-width: 180px; height: 32px; padding: 4px 20px 4px 8px; }
+body.device-mobile .mode-switch { top: 42px; left: 50%; right: auto; transform: translateX(-50%); z-index: 6; }
 body.device-mobile .mode-button { min-height: 34px; padding: 0 11px; font-size: 10px; }
 body.device-mobile .top-status { font-size: 0; }
 body.device-mobile .top-status .status-light { margin-right: 0; }
