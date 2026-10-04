@@ -8,14 +8,15 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Моторная — городская автомастерская</title>
-  <link rel="stylesheet" href="styles.css?v=topbar-landscape-20261005-5">
+  <link rel="stylesheet" href="styles.css?v=landscape-shell-fix-20261005-6">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script defer src="game.js?v=orientation-fix-20261005-7"></script>
+  <script defer src="game.js?v=orientation-fix-20261005-8"></script>
 
 </head>
 <body>
-  <main id="game" class="game-shell">
+  <main id="game">
+    <div class="game-shell">
     <div id="scene" class="scene" aria-label="Трёхмерный город и автомобиль"></div>
     <div class="scene-grain" aria-hidden="true"></div>
 
@@ -114,6 +115,7 @@
     <div id="webgl-warning" class="warning-screen is-hidden" role="alert">
       <span class="warning-icon">!</span><h2>3D-сцена недоступна</h2>
       <p id="warning-copy">Включи аппаратное ускорение и поддержку WebGL в браузере.</p>
+    </div>
     </div>
   </main>
 </body>
