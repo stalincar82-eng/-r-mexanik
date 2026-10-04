@@ -12,6 +12,9 @@
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #17211d; }
 body { color: var(--ink); font-family: 'Manrope', 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
 button { color: inherit; font: inherit; }
+/* Safari/iPhone: the game UI is not selectable text. */
+#game, #game * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; -webkit-user-drag: none !important; }
+#game input, #game select, #game textarea { -webkit-user-select: auto !important; user-select: auto !important; }
 .game-shell { position: relative; width: 100%; height: 100%; overflow: hidden; background: #a9b8a8; }
 .scene { position: absolute; inset: 0; }
 .scene canvas { display: block; width: 100%; height: 100%; }
