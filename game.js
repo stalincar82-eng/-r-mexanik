@@ -565,6 +565,12 @@
     document.getElementById('car-selector').addEventListener('change', function (event) {
       loadCarModel(event.currentTarget.value);
     });
+    document.getElementById('help-button').addEventListener('click', function () {
+      document.getElementById('help-panel').classList.toggle('is-hidden');
+    });
+    document.getElementById('help-close').addEventListener('click', function () {
+      document.getElementById('help-panel').classList.add('is-hidden');
+    });
     document.getElementById('exit-button').addEventListener('click', function () {
       document.getElementById('game-ui').classList.add('is-hidden');
       document.getElementById('start-screen').classList.remove('is-hidden');
@@ -827,7 +833,8 @@
     var brake = keyState.space || touchState.brake;
     var left = keyState.keya || keyState.arrowleft || touchState.left || touchState.swipeLeft;
     var right = keyState.keyd || keyState.arrowright || touchState.right || touchState.swipeRight;
-    var targetSteering = (right ? 1 : 0) - (left ? 1 : 0);
+    /* The vehicle model's forward axis is mirrored relative to the steering input. Invert the steering value so ← is left and → is right on screen. */
+    var targetSteering = (left ? 1 : 0) - (right ? 1 : 0);
     if (selectedGear !== 'P' && !left && !right && Math.abs(mouseSteering) > 0.08) targetSteering = mouseSteering;
     steering += (targetSteering - steering) * Math.min(1, delta * 8);
     var ready = true;
