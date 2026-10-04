@@ -12,7 +12,6 @@
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #17211d; }
 body { color: var(--ink); font-family: 'Manrope', 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
 button { color: inherit; font: inherit; }
-/* Safari/iPhone: the game UI is not selectable text. */
 #game, #game * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; -webkit-user-drag: none !important; }
 #game input, #game select, #game textarea { -webkit-user-select: auto !important; user-select: auto !important; }
 #game { position: relative; width: 100%; height: 100%; overflow: hidden; }
@@ -22,33 +21,32 @@ button { color: inherit; font: inherit; }
 .scene canvas { cursor: crosshair; touch-action: none; }
 .scene-grain { position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: .13; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E"); mix-blend-mode: soft-light; }
 .is-hidden { display: none !important; }
-
-/* App-style landscape fallback for phones that do not allow browser orientation lock. */
 body.force-landscape { overflow: hidden; }
-body.force-landscape > #game {
-  position: fixed;
-  inset: 0;
-  width: 100dvw;
-  height: 100dvh;
-  overflow: hidden;
-  background: #000;
+body.force-landscape > #game { position: fixed; inset: 0; width: 100dvw; height: 100dvh; overflow: hidden; background: #000; }
+body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; height: 100dvw; left: 50%; top: 50%; margin: 0; overflow: hidden; background: #000; transform: translate3d(-50%, -50%, 0) rotate(90deg); backface-visibility: hidden; transform-origin: center center; }
+@supports not (width: 100dvh) { body.force-landscape > #game > .game-shell { width: 100vh; height: 100vw; } }
+
+/* Compact HUD: keep driving controls clear on phones and small windows. */
+.drive-readout { transform: scale(.78); transform-origin: left top; }
+.drive-readout strong { font-size: 27px !important; }
+.gear-button { width: 21px !important; height: 21px !important; }
+.ignition-button { padding: 5px !important; font-size: 7px !important; }
+.drive-controls { left: 12px !important; right: 12px !important; bottom: 10px !important; }
+.drive-control { min-width: 48px !important; height: 44px !important; font-size: 10px !important; }
+.gas-control { min-width: 58px !important; }
+.workshop-panel { max-height: calc(100% - 150px) !important; }
+@media (max-width: 700px) {
+  .drive-readout { top: 58px !important; left: 8px !important; transform: scale(.66); transform-origin: left top; }
+  .drive-controls { left: 8px !important; right: 8px !important; bottom: 8px !important; }
+  .drive-control { min-width: 44px !important; height: 40px !important; }
+  .gas-control { min-width: 54px !important; }
+  .workshop-panel { top: 58px !important; right: 8px !important; width: min(285px, calc(100% - 16px)) !important; max-height: calc(100% - 125px) !important; padding: 12px !important; }
+  .part-row { min-height: 40px !important; padding: 5px !important; font-size: 10px !important; }
 }
-body.force-landscape > #game > .game-shell {
-  position: absolute;
-  width: 100dvh;
-  height: 100dvw;
-  left: 50%;
-  top: 50%;
-  margin: 0;
-  overflow: hidden;
-  background: #000;
-  transform: translate3d(-50%, -50%, 0) rotate(90deg);
-  backface-visibility: hidden;
-  transform-origin: center center;
-}
-@supports not (width: 100dvh) {
-  body.force-landscape > #game > .game-shell {
-    width: 100vh;
-    height: 100vw;
-  }
+@media (orientation: landscape) and (max-height: 600px) {
+  .drive-readout { bottom: 7px !important; top: auto !important; left: 50% !important; transform: translateX(-50%) scale(.68) !important; transform-origin: center bottom; }
+  .drive-controls { bottom: 7px !important; }
+  .drive-control { min-width: 42px !important; height: 38px !important; }
+  .gas-control { min-width: 52px !important; }
+  .workshop-panel { top: 58px !important; right: 8px !important; width: 270px !important; max-height: calc(100% - 112px) !important; padding: 10px !important; }
 }
