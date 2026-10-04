@@ -509,3 +509,56 @@ body.force-landscape .workshop-panel {
 
 
 /* Landscape viewport fix: rotate the game surface, not the viewport-sized wrapper. */
+
+
+/* Final mobile landscape header: controls stay in the very top bar. */
+body.force-landscape .topbar{
+  height:54px;
+  padding:0 10px;
+  background:linear-gradient(180deg,rgba(8,12,10,.96),rgba(8,12,10,.78));
+  border-bottom:1px solid rgba(255,255,255,.12);
+  z-index:40;
+}
+body.force-landscape .car-choice-label{
+  top:7px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#a9b5ab;
+  font-size:7px;
+  z-index:45;
+}
+body.force-landscape .car-selector{
+  min-width:155px;
+  width:155px;
+  height:34px;
+  min-height:34px;
+  padding:5px 24px 5px 8px;
+}
+body.force-landscape .mode-switch{
+  top:7px;
+  left:calc(50% + 115px);
+  transform:none;
+  height:34px;
+  padding:2px;
+  z-index:45;
+}
+body.force-landscape .mode-button{
+  min-height:30px;
+  height:30px;
+  padding:0 10px;
+}
+body.force-landscape .help-button{
+  top:7px;
+  right:10px;
+  min-height:34px;
+  height:34px;
+  z-index:46;
+}
+body.force-landscape .help-button span{display:none}
+body.force-landscape .mode-switch + .top-status{margin-left:auto}
+body.force-landscape .top-status{margin-left:auto}
+body.force-landscape .drive-readout{z-index:20}
+body.force-landscape .workshop-panel{top:64px}
