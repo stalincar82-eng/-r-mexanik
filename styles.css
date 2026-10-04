@@ -231,22 +231,17 @@ h1 em { color: var(--acid); font-style: normal; }
 
 
 
-/* On a portrait phone, render the game itself horizontally inside the vertical screen. */
-body.device-mobile #game {
-  width: 100dvh;
-  height: 100dvw;
-  max-width: none;
-  max-height: none;
-  aspect-ratio: 16 / 9;
-}
-
+/* On a portrait phone, keep the phone physically vertical but render the game horizontally. */
 @media (orientation: portrait) and (pointer: coarse) {
   body.device-mobile #game {
     position: fixed;
     top: 50%;
     left: 50%;
-    width: 100dvh;
-    height: 100dvw;
+    width: 100dvw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: auto;
     transform: translate(-50%, -50%) rotate(90deg);
     transform-origin: center center;
   }
