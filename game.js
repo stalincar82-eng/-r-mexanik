@@ -82,6 +82,12 @@
 
   function setLandscapeLayout(enabled) {
     document.body.classList.toggle('force-landscape', enabled);
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        var lockPromise = screen.orientation.lock(enabled ? 'landscape' : 'portrait');
+        if (lockPromise && lockPromise.catch) lockPromise.catch(function () {});
+      }
+    } catch (error) {}
     var button = document.getElementById('orientation-button');
     if (button) {
       button.textContent = enabled ? '↻ ВЕРНУТЬ ВЕРТИКАЛЬНЫЙ ВИД' : '↻ ВКЛЮЧИТЬ ГОРИЗОНТАЛЬНЫЙ ВИД';
