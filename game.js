@@ -76,7 +76,6 @@
   if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
     device = 'mobile';
     document.body.classList.add('device-mobile');
-    resize();
   }
   updateCamera(1);
   animate();
@@ -632,12 +631,6 @@
     var deltaY = event.clientY - pointerLastY;
     /* The game surface is visually rotated on portrait phones. Convert the screen swipe
        back into the game's landscape axes so camera drag still feels natural. */
-    if (document.body.classList.contains('device-mobile') && event.pointerType !== 'mouse') {
-      var rotatedDeltaX = deltaY;
-      var rotatedDeltaY = -deltaX;
-      deltaX = rotatedDeltaX;
-      deltaY = rotatedDeltaY;
-    }
     cameraOrbit -= deltaX * 0.006;
     cameraElevation = Math.max(-0.4, Math.min(0.75, cameraElevation + deltaY * 0.003));
     if (event.pointerType !== 'mouse') {
@@ -670,7 +663,6 @@
     document.getElementById('workshop-panel').classList.add('is-collapsed');
     driving = true;
     setMode('drive');
-    resize();
   }
 
   function setMode(eventOrMode) {
