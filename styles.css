@@ -30,6 +30,7 @@ body.force-landscape > #game {
   width: 100dvw;
   height: 100dvh;
   overflow: hidden;
+  background: #000;
 }
 body.force-landscape > #game > .game-shell {
   position: absolute;
@@ -37,7 +38,11 @@ body.force-landscape > #game > .game-shell {
   height: 100dvw;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) rotate(90deg);
+  margin: 0;
+  overflow: hidden;
+  background: #000;
+  transform: translate3d(-50%, -50%, 0) rotate(90deg);
+  backface-visibility: hidden;
   transform-origin: center center;
 }
 @supports not (width: 100dvh) {
