@@ -488,6 +488,9 @@
 
     for (var meshIndex = 0; meshIndex < meshes.length; meshIndex++) {
       var item = meshes[meshIndex];
+      var itemName = item.mesh.name || '';
+      var namedDisc = /rim|wheel[_ -]?disc|disc[_ -]?wheel|disk|alloy|hubcap/i.test(itemName) &&
+        !/brake|caliper|steering|wheelhouse/i.test(itemName);
       var best = null;
       var bestScore = Infinity;
       for (var wheelIndex = 0; wheelIndex < wheels.length; wheelIndex++) {
@@ -499,12 +502,14 @@
         var radius = wheel.wheelRadius || 0.45;
         var dims = [item.size.x, item.size.y, item.size.z].sort(function(a,b){ return b-a; });
         var roundness = dims[0] / Math.max(dims[1], 0.001);
-        var discLike = dims[1] >= radius * 0.95 &&
-          dims[0] <= radius * 2.25 &&
-          roundness <= 1.28 &&
-          dims[2] <= radius * 0.42;
-        var score = radial / radius + axial / radius;
-        if (radial <= radius * 0.30 && axial <= radius * 0.55 && discLike && score < bestScore) {
+        var discLike = dims[1] >= radius * 0.55 &&
+          dims[0] <= radius * 2.8 &&
+          roundness <= 1.55 &&
+          dims[2] <= radius * 0.65;
+        var closeEnough = radial <= radius * (namedDisc ? 0.72 : 0.48) &&
+          axial <= radius * (namedDisc ? 0.9 : 0.68);
+        var score = radial / radius + axial / radius + (namedDisc ? -0.5 : 0);
+        if (closeEnough && discLike && score < bestScore) {
           bestScore = score;
           best = wheel;
         }
