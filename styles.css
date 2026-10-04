@@ -196,3 +196,12 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
   .drive-readout #gear-value { font-size: 12px !important; min-width: 18px !important; }
   .drive-readout .ignition-button { max-width: 54px !important; padding: 3px 4px !important; font-size: 5px !important; }
 }
+
+/* Final ultra-compact phone HUD */
+@media (max-width:700px){
+ .drive-readout{width:145px!important;max-width:calc(100vw - 20px)!important;padding:3px 5px!important;gap:2px!important;column-gap:3px!important;}
+ .drive-readout .readout-label,.drive-readout .gear-label,.drive-readout .speed-unit{font-size:5px!important;letter-spacing:0!important;}
+ .drive-readout #speed-value{font-size:12px!important;min-width:22px!important;}
+ .drive-readout #gear-value{font-size:11px!important;min-width:16px!important;}
+ .drive-readout .ignition-button{max-width:48px!important;font-size:4px!important;padding:2px 3px!important;}
+}
