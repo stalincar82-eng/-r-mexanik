@@ -26,8 +26,8 @@ button { color: inherit; font: inherit; }
 body.force-landscape { overflow: hidden; }
 body.force-landscape > #game {
   position: fixed;
-  width: 100dvh;
-  height: 100dvw;
+  width: 100dvw;
+  height: 100dvh;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%) rotate(90deg);
@@ -274,7 +274,7 @@ h1 em { color: var(--acid); font-style: normal; }
 
 /* Keep the simulated landscape game exactly inside the phone viewport. */
 @supports not (height: 100dvh) {
-  body.force-landscape > #game { width: 100vh; height: 100vw; }
+  body.force-landscape > #game { width: 100vw; height: 100vh; }
 }
 
 
@@ -492,4 +492,11 @@ body.force-landscape .pedal-pad {
 }
 body.force-landscape .workshop-panel {
   z-index: 25;
+}
+
+
+/* Landscape fallback correction: on portrait phones the game box itself must be portrait before rotation, so the rotated result is truly landscape. */
+body.force-landscape > #game { width: 100dvw; height: 100dvh; }
+@supports not (width: 100dvw) {
+  body.force-landscape > #game { width: 100vw; height: 100vh; }
 }
