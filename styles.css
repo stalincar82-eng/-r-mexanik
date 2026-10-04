@@ -26,17 +26,25 @@ button { color: inherit; font: inherit; }
 body.force-landscape { overflow: hidden; }
 body.force-landscape > #game {
   position: fixed;
+  inset: 0;
   width: 100dvw;
   height: 100dvh;
+  overflow: hidden;
+}
+body.force-landscape > #game > .game-shell {
+  position: absolute;
+  width: 100dvh;
+  height: 100dvw;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%) rotate(90deg);
   transform-origin: center center;
-  overflow: hidden;
 }
-body.force-landscape > #game > .game-shell {
-  width: 100%;
-  height: 100%;
+@supports not (width: 100dvh) {
+  body.force-landscape > #game > .game-shell {
+    width: 100vh;
+    height: 100vw;
+  }
 }
 body.force-landscape .orientation-button { display: none; }
 
@@ -495,8 +503,4 @@ body.force-landscape .workshop-panel {
 }
 
 
-/* Landscape fallback correction: on portrait phones the game box itself must be portrait before rotation, so the rotated result is truly landscape. */
-body.force-landscape > #game { width: 100dvw; height: 100dvh; }
-@supports not (width: 100dvw) {
-  body.force-landscape > #game { width: 100vw; height: 100vh; }
-}
+/* Landscape viewport fix: rotate the game surface, not the viewport-sized wrapper. */
