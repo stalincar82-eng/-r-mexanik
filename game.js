@@ -564,6 +564,14 @@
       isOpen: false,
       wheel: !!options.wheel,
       wheelCenter: options.center || center,
+      wheelSpinAxis: (function () {
+        if (!options.wheel) return 'x';
+        var size = new THREE.Vector3();
+        bounds.getSize(size);
+        if (size.x <= size.y && size.x <= size.z) return 'x';
+        if (size.z <= size.x && size.z <= size.y) return 'z';
+        return 'y';
+      })(),
       basePosition: pivot.position.clone(),
       transitionProgress: 0,
       transitionTarget: 0,
@@ -919,9 +927,12 @@
     distance += Math.abs(travel);
     var wheelIndex;
     for (wheelIndex = 0; wheelIndex < wheels.length; wheelIndex++) {
-      if (wheels[wheelIndex].visible) {
-        wheels[wheelIndex].pivot.rotation.x += travel / 0.34;
-      }
+      var wheelPart = wheels[wheelIndex];
+      if (!wheelPart.visible) continue;
+      var spin = travel / 0.34;
+      if (wheelPart.wheelSpinAxis === 'z') wheelPart.pivot.rotation.z += spin;
+      else if (wheelPart.wheelSpinAxis === 'y') wheelPart.pivot.rotation.y += spin;
+      else wheelPart.pivot.rotation.x += spin;
     }
     document.getElementById('speed-value').textContent = ('0' + Math.round(Math.abs(speed))).slice(-2);
     document.getElementById('gear-value').textContent = selectedGear;
