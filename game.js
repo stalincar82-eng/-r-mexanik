@@ -73,6 +73,9 @@
   buildWorkshop();
   bindInterface();
   updatePartsPanel();
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+    startGame({ currentTarget: document.querySelector('[data-device="mobile"]') });
+  }
   updateCamera(1);
   animate();
 
