@@ -36,6 +36,9 @@
   var cameraTarget;
   var cameraPosition;
 
+  var orientationButton = document.getElementById('orientation-button');
+  if (orientationButton) orientationButton.addEventListener('click', toggleOrientation);
+
   if (!window.THREE) {
     showWarning('Не удалось загрузить Three.js. Подключись к интернету и обнови страницу.');
     return;
@@ -599,7 +602,6 @@
     document.getElementById('car-selector').addEventListener('change', function (event) {
       loadCarModel(event.currentTarget.value);
     });
-    document.getElementById('orientation-button').addEventListener('click', toggleOrientation);
     document.getElementById('help-button').addEventListener('click', function () {
       document.getElementById('help-panel').classList.toggle('is-hidden');
     });
