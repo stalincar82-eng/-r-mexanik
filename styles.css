@@ -170,3 +170,50 @@ h1 em { color: var(--acid); font-style: normal; }
   .part-name { font-size: 9px; }
   .topbar .mini-brand span:nth-child(2) { letter-spacing: .4px; }
 }
+
+/* Mobile driving controls */
+.help-button{position:absolute;right:28px;top:92px;z-index:8;display:flex;align-items:center;gap:7px;min-height:38px;padding:0 11px;border:1px solid rgba(255,255,255,.22);color:#e9eee9;background:rgba(17,25,22,.82);font-size:9px;font-weight:800;letter-spacing:.5px;cursor:pointer;pointer-events:auto}
+.help-button:first-letter{color:var(--acid)}
+.help-button:hover,.help-button:focus-visible{border-color:var(--acid);color:var(--acid);outline:none}
+.help-panel{position:absolute;right:28px;top:138px;z-index:9;width:min(330px,calc(100vw - 56px));padding:16px;border:1px solid rgba(224,239,226,.18);background:rgba(17,25,22,.95);box-shadow:0 18px 55px rgba(0,0,0,.3);pointer-events:auto}
+.help-panel.is-hidden{display:none}
+.help-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.help-panel h2{margin:5px 0 0;font-family:'Barlow Condensed',sans-serif;font-size:27px;font-weight:600}
+.help-close{width:32px;height:32px;border:1px solid rgba(255,255,255,.2);color:#d7e0d8;background:transparent;font-size:20px;cursor:pointer}
+.help-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:14px}
+.help-grid>div{display:grid;gap:4px;min-height:48px;padding:9px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035)}
+.help-grid strong{font-size:10px;color:var(--acid)}
+.help-grid span{color:#a9b5ab;font-size:9px}
+.mobile-help{display:none}
+@media (max-width:700px){
+  .topbar{height:60px;padding:0 12px}
+  .mini-brand .brand-mark{width:28px;height:28px;font-size:18px}
+  .mini-brand small{display:none}
+  .car-choice-label{left:50%;top:66px;transform:translateX(-50%);z-index:5}
+  .car-selector{min-width:165px;min-height:34px}
+  .mode-switch{top:106px}
+  .drive-readout{top:150px;left:12px;padding:9px 11px}
+  .drive-readout strong{font-size:29px}
+  .help-button{top:150px;right:12px;min-height:40px;padding:0 12px;border-radius:20px}
+  .help-button span{display:none}
+  .help-panel{top:198px;right:12px;width:calc(100vw - 24px);max-height:calc(100vh - 320px);overflow:auto;padding:14px}
+  .desktop-help{display:none}
+  .mobile-help{display:grid}
+  .drive-controls{left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr 1.35fr;align-items:end;gap:12px;padding:12px 12px calc(12px + env(safe-area-inset-bottom));border:0;border-top:1px solid rgba(255,255,255,.16);background:linear-gradient(180deg,rgba(17,25,22,.18),rgba(17,25,22,.94) 30%);pointer-events:auto}
+  .steer-pad{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pedal-pad{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:54px 68px;gap:10px}
+  .drive-controls button{min-width:0;width:100%;height:68px;min-height:68px;border-radius:18px;font-size:15px;font-weight:800;background:rgba(255,255,255,.11);box-shadow:0 5px 16px rgba(0,0,0,.18)}
+  .steer-pad .steer-control{height:78px;min-height:78px;font-size:30px}
+  .pedal-pad .reverse-control,.pedal-pad .brake-control{height:54px;min-height:54px;border-radius:14px;font-size:10px}
+  .pedal-pad .gas-control{grid-column:1 / -1;height:68px;min-height:68px;border-color:rgba(217,243,106,.55);color:#17211d;background:var(--acid);font-size:14px}
+  .drive-controls button.is-pressed{transform:translateY(2px) scale(.97);filter:brightness(.88)}
+  .drive-hint{display:none}
+  .corner-note{display:none}
+  .toast{bottom:190px;max-width:calc(100vw - 24px);text-align:center}
+}
+@media (max-width:390px){
+  .drive-controls{grid-template-columns:.9fr 1.2fr;gap:8px;padding-left:8px;padding-right:8px}
+  .steer-pad,.pedal-pad{gap:7px}
+  .drive-controls button{border-radius:15px}
+  .steer-pad .steer-control{height:70px;min-height:70px}
+}
