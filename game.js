@@ -417,6 +417,8 @@
       registerWheelGroups(wheelBounds);
       attachWheelAccessories(model);
     }
+  }
+
   function registerWheelGroups(wheelBounds) {
     var minimumX = Infinity;
     var maximumX = -Infinity;
