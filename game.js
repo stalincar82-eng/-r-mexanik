@@ -437,10 +437,14 @@
       var id = 'wheel' + (front ? 'F' : 'R') + side;
       if (parts[id]) continue;
       var label = (front ? 'Переднее ' : 'Заднее ') + (side === 'L' ? 'левое' : 'правое') + ' колесо';
-      var wheelPart = createPart(id, label, [wheel.group], { wheel: true, center: wheel.center });
+      var wheelAxisWorld = getWheelSpinAxis(wheel.bounds);
+      var wheelAxisLocal = wheelAxisWorld.clone().applyQuaternion(car.quaternion.clone().invert()).normalize();
+      var wheelPart = createPart(id, label, [wheel.group], {
+        wheel: true,
+        center: wheel.center,
+        wheelSpinAxisVector: wheelAxisLocal
+      });
       wheelPart.pivot.rotation.order = 'YXZ';
-      parts[id] = wheelPart;
-      wheelPart.wheelSpinAxisVector = getWheelSpinAxis(wheel.bounds);
       parts[id] = wheelPart;
       wheels.push(wheelPart);
     }
@@ -476,7 +480,9 @@
           nearest = wheelPart;
         }
       }
-      if (nearest && nearestDistance < 1.2) nearest.pivot.attach(mesh);
+      if (nearest && nearestDistance < 1.2) {
+        (nearest.spinPivot || nearest.pivot).attach(mesh);
+      }
     }
   }
 
@@ -596,12 +602,21 @@
     if (options.hinge === 'centerZ') localHinge.z = center.z;
     car.add(pivot);
     pivot.position.copy(car.worldToLocal(localHinge.clone()));
-    for (var groupIndex = 0; groupIndex < groups.length; groupIndex++) pivot.attach(groups[groupIndex]);
+    var spinPivot = null;
+    if (options.wheel) {
+      spinPivot = new THREE.Group();
+      pivot.add(spinPivot);
+    }
+    for (var groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+      if (spinPivot) spinPivot.attach(groups[groupIndex]);
+      else pivot.attach(groups[groupIndex]);
+    }
     var part = {
       id: id,
       label: label,
       groups: groups,
       pivot: pivot,
+      spinPivot: spinPivot,
       visible: true,
       openable: !!options.open,
       axis: options.axis || 'x',
@@ -611,6 +626,7 @@
       isOpen: false,
       wheel: !!options.wheel,
       wheelCenter: options.center || center,
+      wheelSpinAxisVector: options.wheelSpinAxisVector || new THREE.Vector3(1, 0, 0),
       wheelSpinAxis: (function () {
         if (!options.wheel) return 'x';
         var axis = getWheelSpinAxis(bounds);
@@ -977,7 +993,8 @@
       if (!wheelPart.visible) continue;
       var spin = travel / 0.34;
       var spinAxis = wheelPart.wheelSpinAxisVector || new THREE.Vector3(1, 0, 0);
-      wheelPart.pivot.rotateOnAxis(spinAxis, spin);
+      var spinTarget = wheelPart.spinPivot || wheelPart.pivot;
+      spinTarget.rotateOnAxis(spinAxis, spin);
     }
     document.getElementById('speed-value').textContent = ('0' + Math.round(Math.abs(speed))).slice(-2);
     document.getElementById('gear-value').textContent = selectedGear;
