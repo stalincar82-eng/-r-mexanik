@@ -2,13 +2,25 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"><meta name="orientation" content="landscape">
   <meta name="theme-color" content="#101816">
   <title>Моторная — городская автомастерская</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <script defer src="game.js?v=clean-20261003"></script>
+
+<script>
+(function(){
+  function lockLandscape(){
+    try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function(){}); } catch(e) {}
+  }
+  document.addEventListener('click', function(e){
+    if (e.target.closest && e.target.closest('[data-device="mobile"]')) lockLandscape();
+  });
+  window.addEventListener('load', lockLandscape);
+})();
+</script>
 </head>
 <body>
   <main id="game" class="game-shell">
