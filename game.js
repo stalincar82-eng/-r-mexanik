@@ -590,6 +590,8 @@
     window.addEventListener('resize', resize);
     var controls = document.querySelectorAll('[data-control]');
     for (i = 0; i < controls.length; i++) {
+      controls[i].addEventListener('contextmenu', preventControlMenu);
+      controls[i].addEventListener('selectstart', preventControlMenu);
       controls[i].addEventListener('pointerdown', pressControl);
       controls[i].addEventListener('pointerup', releaseControl);
       controls[i].addEventListener('pointerleave', releaseControl);
@@ -680,8 +682,14 @@
     document.getElementById('gear-value').textContent = selectedGear;
   }
 
+  function preventControlMenu(event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   function pressControl(event) {
     event.preventDefault();
+    event.stopPropagation();
     var control = event.currentTarget.getAttribute('data-control');
     touchState[control] = true;
     event.currentTarget.classList.add('is-pressed');
