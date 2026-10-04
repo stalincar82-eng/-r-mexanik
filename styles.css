@@ -138,14 +138,13 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
 
 /* Gear selector sits directly above the gas pedal. */
 .drive-controls { position: absolute !important; }
-.pedal-pad { position: relative !important; }
-.pedal-pad .gear-selector { position: absolute !important; right: 0 !important; bottom: calc(100% + 8px) !important; z-index: 55 !important; gap: 3px !important; }
-.pedal-pad .gear-selector .gear-button { width: 25px !important; height: 25px !important; font-size: 8px !important; }
+.gear-selector { position: fixed !important; right: 18px !important; bottom: 112px !important; z-index: 55 !important; gap: 3px !important; padding: 3px !important; border-radius: 7px !important; background: rgba(9,14,12,.9) !important; }
+.gear-selector .gear-button { width: 25px !important; height: 25px !important; font-size: 8px !important; }
 @media (max-width: 700px) {
   .drive-readout { top: 10px !important; left: 10px !important; }
-  .pedal-pad .gear-selector { bottom: calc(100% + 6px) !important; }
+  .gear-selector { right: 9px !important; bottom: 94px !important; }
 }
 @media (orientation: landscape) and (max-height: 600px) {
   .drive-readout { top: 10px !important; left: 10px !important; }
-  .pedal-pad .gear-selector { bottom: calc(100% + 5px) !important; }
+  .gear-selector { right: 9px !important; bottom: 83px !important; }
 }
