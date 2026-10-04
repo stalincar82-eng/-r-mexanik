@@ -26,14 +26,18 @@ button { color: inherit; font: inherit; }
 body.force-landscape { overflow: hidden; }
 body.force-landscape > #game {
   position: fixed;
-  width: 100vh;
-  height: 100vw;
-  left: calc((100vw - 100vh) / 2);
-  top: calc((100vh - 100vw) / 2);
-  transform: rotate(90deg);
+  width: 100dvh;
+  height: 100dvw;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
   transform-origin: center center;
+  overflow: hidden;
 }
-body.force-landscape .start-screen { overflow: hidden; }
+body.force-landscape > #game > .game-shell {
+  width: 100%;
+  height: 100%;
+}
 body.force-landscape .orientation-button { display: none; }
 
 /* Landscape phones: keep the initial device picker inside the short viewport. */
@@ -267,3 +271,8 @@ h1 em { color: var(--acid); font-style: normal; }
 .orientation-button { margin-top: 10px; width: 100%; min-height: 38px; padding: 8px 12px; border: 1px solid rgba(217,243,106,.42); color: var(--acid); background: rgba(17,25,22,.68); font-size: 9px; font-weight: 800; letter-spacing: .7px; cursor: pointer; }
 .orientation-button:hover, .orientation-button:focus-visible { color: #152015; background: var(--acid); outline: none; }
 @media (orientation: landscape) and (max-height: 600px) { .orientation-button { margin-top: 7px; min-height: 32px; padding: 6px 9px; } }
+
+/* Keep the simulated landscape game exactly inside the phone viewport. */
+@supports not (height: 100dvh) {
+  body.force-landscape > #game { width: 100vh; height: 100vw; }
+}
