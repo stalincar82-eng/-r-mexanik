@@ -35,7 +35,7 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
 .drive-readout {
   top: auto !important;
   left: 50% !important;
-  bottom: 14px !important;
+  bottom: 104px !important;
   transform: translateX(-50%) !important;
   transform-origin: center bottom !important;
   z-index: 50 !important;
@@ -76,9 +76,9 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
 }
 .steer-pad, .pedal-pad { gap: 10px !important; pointer-events: auto !important; }
 .drive-control {
-  min-width: 72px !important;
-  width: 72px !important;
-  height: 66px !important;
+  min-width: 84px !important;
+  width: 84px !important;
+  height: 76px !important;
   border: 1px solid rgba(255,255,255,.24) !important;
   border-radius: 14px !important;
   background: rgba(12,18,15,.84) !important;
@@ -90,9 +90,9 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
 }
 .drive-control:active { transform: translateY(2px) scale(.97); background: rgba(35,46,39,.95) !important; }
 .gas-control {
-  min-width: 92px !important;
-  width: 92px !important;
-  height: 76px !important;
+  min-width: 108px !important;
+  width: 108px !important;
+  height: 86px !important;
   border-radius: 16px !important;
   border-color: #d9f36a !important;
   color: #17211d !important;
@@ -105,7 +105,7 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
 @media (max-width: 700px) {
   .drive-readout {
     left: 50% !important;
-    bottom: 10px !important;
+    bottom: 96px !important;
     transform: translateX(-50%) !important;
     gap: 7px !important;
     min-height: 52px !important;
@@ -117,16 +117,16 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
   .ignition-button { padding: 7px 8px !important; font-size: 8px !important; }
   .drive-controls { left: 9px !important; right: 9px !important; bottom: 8px !important; }
   .steer-pad, .pedal-pad { gap: 8px !important; }
-  .drive-control { min-width: 64px !important; width: 64px !important; height: 60px !important; border-radius: 13px !important; font-size: 15px !important; }
-  .gas-control { min-width: 82px !important; width: 82px !important; height: 68px !important; font-size: 17px !important; }
+  .drive-control { min-width: 74px !important; width: 74px !important; height: 70px !important; border-radius: 13px !important; font-size: 15px !important; }
+  .gas-control { min-width: 96px !important; width: 96px !important; height: 78px !important; font-size: 17px !important; }
   .workshop-panel { top: 58px !important; right: 8px !important; width: min(285px, calc(100% - 16px)) !important; max-height: calc(100% - 125px) !important; padding: 12px !important; }
   .part-row { min-height: 40px !important; padding: 5px !important; font-size: 10px !important; }
 }
 
 @media (orientation: landscape) and (max-height: 600px) {
-  .drive-readout { top: auto !important; bottom: 8px !important; left: 50% !important; transform: translateX(-50%) !important; }
+  .drive-readout { top: auto !important; bottom: 82px !important; left: 50% !important; transform: translateX(-50%) !important; }
   .drive-controls { bottom: 8px !important; }
-  .drive-control { min-width: 62px !important; width: 62px !important; height: 56px !important; }
-  .gas-control { min-width: 78px !important; width: 78px !important; height: 62px !important; }
+  .drive-control { min-width: 70px !important; width: 70px !important; height: 64px !important; }
+  .gas-control { min-width: 88px !important; width: 88px !important; height: 70px !important; }
   .workshop-panel { top: 58px !important; right: 8px !important; width: 270px !important; max-height: calc(100% - 112px) !important; padding: 10px !important; }
 }
