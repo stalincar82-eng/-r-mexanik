@@ -657,7 +657,6 @@
 
   function startGame(event) {
     device = event.currentTarget.getAttribute('data-device');
-    if (device === 'mobile') requestLandscape();
     document.body.classList.toggle('device-mobile', device === 'mobile');
     document.getElementById('start-screen').classList.add('is-hidden');
     document.getElementById('game-ui').classList.remove('is-hidden');
