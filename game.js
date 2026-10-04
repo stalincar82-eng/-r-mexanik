@@ -444,6 +444,8 @@
         center: wheel.center,
         wheelSpinAxisVector: wheelAxisLocal
       });
+      var wheelSize = wheel.bounds.getSize(new THREE.Vector3());
+      wheelPart.wheelRadius = Math.max(wheelSize.x, wheelSize.y, wheelSize.z) * 0.5;
       wheelPart.pivot.rotation.order = 'YXZ';
       parts[id] = wheelPart;
       wheels.push(wheelPart);
@@ -460,28 +462,74 @@
   }
 
   function attachWheelAccessories(model) {
-    var accessories = [];
+    /* Rims/discs in some GLB files have generic node names, so name matching alone
+       misses them. Find independent meshes by their actual position around each wheel axle. */
+    var wheelRoots = [];
+    for (var rootIndex = 0; rootIndex < wheels.length; rootIndex++) {
+      var wheelPartRoot = wheels[rootIndex];
+      var rootGroup = wheelPartRoot.groups && wheelPartRoot.groups[0];
+      if (rootGroup) wheelRoots.push(rootGroup);
+    }
+
+    var meshes = [];
     model.traverse(function (node) {
-      if (!node.isMesh || !node.name) return;
-      if (!/rim|alloy|disc|wheel[_ .-]?cap|hub[_ .-]?cap/i.test(node.name)) return;
-      if (/steering|wheelhouse/i.test(node.name)) return;
-      accessories.push(node);
+      if (!node.isMesh) return;
+      if (/steering|wheelhouse/i.test(node.name || '')) return;
+
+      var alreadyInWheel = false;
+      for (var wheelRootIndex = 0; wheelRootIndex < wheelRoots.length; wheelRootIndex++) {
+        var root = wheelRoots[wheelRootIndex];
+        if (root === node || root.getObjectById(node.id)) {
+          alreadyInWheel = true;
+          break;
+        }
+      }
+      if (alreadyInWheel) return;
+
+      var bounds = new THREE.Box3().setFromObject(node);
+      if (bounds.isEmpty()) return;
+      var size = bounds.getSize(new THREE.Vector3());
+      var center = bounds.getCenter(new THREE.Vector3());
+      meshes.push({ mesh: node, bounds: bounds, size: size, center: center });
     });
-    for (var i = 0; i < accessories.length; i++) {
-      var mesh = accessories[i];
-      var worldCenter = new THREE.Box3().setFromObject(mesh).getCenter(new THREE.Vector3());
+
+    for (var meshIndex = 0; meshIndex < meshes.length; meshIndex++) {
+      var item = meshes[meshIndex];
       var nearest = null;
-      var nearestDistance = Infinity;
-      for (var j = 0; j < wheels.length; j++) {
-        var wheelPart = wheels[j];
-        var d = worldCenter.distanceTo(wheelPart.wheelCenter);
-        if (d < nearestDistance) {
-          nearestDistance = d;
+      var nearestScore = Infinity;
+
+      for (var wheelIndex = 0; wheelIndex < wheels.length; wheelIndex++) {
+        var wheelPart = wheels[wheelIndex];
+        var axis = wheelPart.wheelSpinAxisVector || new THREE.Vector3(1, 0, 0);
+        axis = axis.clone().normalize();
+        var delta = item.center.clone().sub(wheelPart.wheelCenter);
+        var axialDistance = Math.abs(delta.dot(axis));
+        var radialVector = delta.clone().sub(axis.clone().multiplyScalar(delta.dot(axis)));
+        var radialDistance = radialVector.length();
+        var wheelSize = wheelPart.wheelRadius || 0.45;
+        var largest = Math.max(item.size.x, item.size.y, item.size.z);
+        var smallest = Math.min(item.size.x, item.size.y, item.size.z);
+
+        /* A rim/disc is centered on the axle, while body/suspension geometry is
+           usually farther away or much larger. Use both spatial and size filters. */
+        var radialLimit = wheelSize * 0.55;
+        var axialLimit = wheelSize * 1.15;
+        var sizeLimit = wheelSize * 2.35;
+        var score = radialDistance / Math.max(wheelSize, 0.01) + axialDistance / Math.max(wheelSize, 0.01);
+
+        if (radialDistance <= radialLimit &&
+            axialDistance <= axialLimit &&
+            largest <= sizeLimit &&
+            largest >= wheelSize * 0.25 &&
+            smallest <= wheelSize * 1.25 &&
+            score < nearestScore) {
+          nearestScore = score;
           nearest = wheelPart;
         }
       }
-      if (nearest && nearestDistance < 1.2) {
-        (nearest.spinPivot || nearest.pivot).attach(mesh);
+
+      if (nearest) {
+        (nearest.spinPivot || nearest.pivot).attach(item.mesh);
       }
     }
   }
