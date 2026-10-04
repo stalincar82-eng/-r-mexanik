@@ -79,6 +79,25 @@
       </aside>
 
       <div class="drive-hint"><span class="hint-key">W A S D</span><span>движение</span><span class="hint-separator">·</span><span class="hint-key">МЫШЬ</span><span>поворот · потяни для обзора</span></div>
+      <button id="help-button" class="help-button" type="button" aria-label="Открыть справку по управлению">? <span>Управление</span></button>
+      <div id="help-panel" class="help-panel is-hidden" role="dialog" aria-modal="false" aria-label="Справка по управлению">
+        <div class="help-panel-head"><div><p class="eyebrow">УПРАВЛЕНИЕ</p><h2>Как играть</h2></div><button id="help-close" class="help-close" type="button" aria-label="Закрыть справку">×</button></div>
+        <div class="help-grid mobile-help">
+          <div><strong>← / →</strong><span>Поворот машины</span></div>
+          <div><strong>ГАЗ</strong><span>Ехать вперёд</span></div>
+          <div><strong>НАЗАД</strong><span>Движение назад</span></div>
+          <div><strong>ТОРМОЗ</strong><span>Торможение</span></div>
+          <div><strong>Проведи пальцем</strong><span>Осмотр камеры</span></div>
+        </div>
+        <div class="help-grid desktop-help">
+          <div><strong>W / ↑</strong><span>Газ</span></div>
+          <div><strong>S / ↓</strong><span>Назад</span></div>
+          <div><strong>A / ←</strong><span>Налево</span></div>
+          <div><strong>D / →</strong><span>Направо</span></div>
+          <div><strong>SPACE</strong><span>Тормоз</span></div>
+          <div><strong>МЫШЬ</strong><span>Обзор камеры</span></div>
+        </div>
+      </div>
       <div id="drive-controls" class="drive-controls" aria-label="Управление автомобилем">
         <div class="steer-pad"><button class="steer-control" data-control="left" type="button" aria-label="Повернуть налево">←</button><button class="steer-control" data-control="right" type="button" aria-label="Повернуть направо">→</button></div>
         <div class="pedal-pad"><button class="reverse-control" data-control="reverse" type="button">НАЗАД</button><button class="brake-control" data-control="brake" type="button">ТОРМОЗ</button><button class="gas-control" data-control="gas" type="button">ГАЗ <span>↑</span></button></div>
