@@ -33,11 +33,11 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
 
 /* Compact driving HUD: gear/speed sits in the gap between steering and pedals. */
 .drive-readout {
-  top: auto !important;
-  left: 50% !important;
-  bottom: 18px !important;
-  transform: translateX(-50%) !important;
-  transform-origin: center bottom !important;
+  top: 18px !important;
+  left: 18px !important;
+  bottom: auto !important;
+  transform: none !important;
+  transform-origin: top left !important;
   z-index: 50 !important;
   display: flex !important;
   align-items: center !important;
@@ -45,7 +45,7 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
   gap: 5px !important;
   min-height: 38px !important;
   padding: 4px 6px !important;
-  max-width: 190px !important;
+  max-width: 170px !important;
   border: 1px solid rgba(255,255,255,.18) !important;
   border-left: 3px solid #d9f36a !important;
   border-radius: 12px !important;
@@ -106,8 +106,10 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
 @media (max-width: 700px) {
   .drive-readout {
     left: 50% !important;
-    bottom: 16px !important;
-    transform: translateX(-50%) !important;
+    top: 10px !important;
+    left: 10px !important;
+    bottom: auto !important;
+    transform: none !important;
     gap: 4px !important;
     min-height: 32px !important;
     padding: 3px 5px !important;
@@ -131,4 +133,19 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
   .drive-control { min-width: 70px !important; width: 70px !important; height: 64px !important; }
   .gas-control { min-width: 88px !important; width: 88px !important; height: 70px !important; }
   .workshop-panel { top: 58px !important; right: 8px !important; width: 270px !important; max-height: calc(100% - 112px) !important; padding: 10px !important; }
+}
+
+
+/* Gear selector sits directly above the gas pedal. */
+.drive-controls { position: absolute !important; }
+.pedal-pad { position: relative !important; }
+.pedal-pad .gear-selector { position: absolute !important; right: 0 !important; bottom: calc(100% + 8px) !important; z-index: 55 !important; gap: 3px !important; }
+.pedal-pad .gear-selector .gear-button { width: 25px !important; height: 25px !important; font-size: 8px !important; }
+@media (max-width: 700px) {
+  .drive-readout { top: 10px !important; left: 10px !important; }
+  .pedal-pad .gear-selector { bottom: calc(100% + 6px) !important; }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .drive-readout { top: 10px !important; left: 10px !important; }
+  .pedal-pad .gear-selector { bottom: calc(100% + 5px) !important; }
 }
