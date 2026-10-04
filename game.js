@@ -80,14 +80,6 @@
   updateCamera(1);
   animate();
 
-  function requestLandscape() {
-    try {
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').catch(function () {});
-      }
-    } catch (error) {}
-  }
-
   function showWarning(message) {
     warning.classList.remove('is-hidden');
     document.getElementById('warning-copy').textContent = message;
