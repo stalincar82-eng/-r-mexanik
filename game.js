@@ -515,13 +515,17 @@
         var radialLimit = wheelSize * 0.55;
         var axialLimit = wheelSize * 1.15;
         var sizeLimit = wheelSize * 2.35;
+        var dimensions = [item.size.x, item.size.y, item.size.z].sort(function (a, b) { return b - a; });
+        var roundness = dimensions[0] / Math.max(dimensions[1], 0.001);
+        var discLike = dimensions[1] >= wheelSize * 0.72 &&
+          dimensions[0] <= sizeLimit &&
+          roundness <= 1.55 &&
+          smallest <= wheelSize * 0.75;
         var score = radialDistance / Math.max(wheelSize, 0.01) + axialDistance / Math.max(wheelSize, 0.01);
 
         if (radialDistance <= radialLimit &&
             axialDistance <= axialLimit &&
-            largest <= sizeLimit &&
-            largest >= wheelSize * 0.25 &&
-            smallest <= wheelSize * 1.25 &&
+            discLike &&
             score < nearestScore) {
           nearestScore = score;
           nearest = wheelPart;
