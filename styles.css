@@ -334,22 +334,30 @@ body.force-landscape .help-panel {
 }
 body.force-landscape .drive-controls {
   left: 10px;
-  right: auto;
+  right: 10px;
   bottom: 10px;
   width: auto;
   min-height: 116px;
   padding: 0;
-  gap: 22px;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: flex-end;
   background: transparent;
   border: 0;
+  pointer-events: none;
 }
-body.force-landscape .steer-pad,
-body.force-landscape .pedal-pad {
+body.force-landscape .steer-pad {
   display: flex;
   align-items: flex-end;
   gap: 12px;
+  pointer-events: auto;
+}
+body.force-landscape .pedal-pad {
+  display: grid;
+  grid-template-columns: 96px 96px;
+  grid-template-rows: 64px 88px;
+  gap: 10px;
+  align-items: end;
+  pointer-events: auto;
 }
 body.force-landscape .drive-controls .drive-control {
   height: 88px;
@@ -382,10 +390,11 @@ body.force-landscape .pedal-pad .brake-control {
   background: rgba(12,18,15,.70);
 }
 body.force-landscape .pedal-pad .gas-control {
+  grid-column: 1 / -1;
   height: 88px;
   min-height: 88px;
-  width: 124px;
-  min-width: 124px;
+  width: 202px;
+  min-width: 202px;
   border-radius: 10px;
   font-size: 14px;
   color: #17211d;
