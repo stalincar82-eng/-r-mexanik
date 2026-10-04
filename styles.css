@@ -231,23 +231,38 @@ h1 em { color: var(--acid); font-style: normal; }
 
 
 
-/* On a portrait phone, keep the phone physically vertical but render the game horizontally. */
+/* Portrait phone: the entire game is a landscape canvas rotated inside the vertical screen. */
 @media (orientation: portrait) and (pointer: coarse) {
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
   body.device-mobile #game {
     position: fixed;
     top: 50%;
     left: 50%;
-    width: 100dvw;
-    height: 100dvh;
+    width: 100dvh;
+    height: 100dvw;
     max-width: none;
     max-height: none;
+    min-width: 0;
+    min-height: 0;
     aspect-ratio: auto;
     transform: translate(-50%, -50%) rotate(90deg);
     transform-origin: center center;
   }
 
   body.device-mobile #game .scene,
-  body.device-mobile #game .game-ui {
+  body.device-mobile #game .game-ui,
+  body.device-mobile #game .start-screen,
+  body.device-mobile #game .warning-screen {
+    width: 100%;
+    height: 100%;
+  }
+
+  body.device-mobile #game .scene canvas {
     width: 100%;
     height: 100%;
   }
