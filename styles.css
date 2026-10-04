@@ -17,26 +17,32 @@ button { color: inherit; font: inherit; }
 #game { position: relative; width: 100%; height: 100%; overflow: hidden; }
 .game-shell { position: relative; width: 100%; height: 100%; overflow: hidden; background: #a9b8a8; }
 .scene { position: absolute; inset: 0; }
-.scene canvas { display: block; width: 100%; height: 100%; }
-.scene canvas { cursor: crosshair; touch-action: none; }
-.scene-grain { position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: .13; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E"); mix-blend-mode: soft-light; }
+.scene canvas { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+.scene-grain { position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: .13; }
 .is-hidden { display: none !important; }
 body.force-landscape { overflow: hidden; }
 body.force-landscape > #game { position: fixed; inset: 0; width: 100dvw; height: 100dvh; overflow: hidden; background: #000; }
 body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; height: 100dvw; left: 50%; top: 50%; margin: 0; overflow: hidden; background: #000; transform: translate3d(-50%, -50%, 0) rotate(90deg); backface-visibility: hidden; transform-origin: center center; }
 @supports not (width: 100dvh) { body.force-landscape > #game > .game-shell { width: 100vh; height: 100vw; } }
 
-/* Compact HUD: keep driving controls clear on phones and small windows. */
-.drive-readout { transform: scale(.78); transform-origin: left top; }
-.drive-readout strong { font-size: 27px !important; }
-.gear-button { width: 21px !important; height: 21px !important; }
-.ignition-button { padding: 5px !important; font-size: 7px !important; }
+/* The workshop panel belongs ONLY to the garage. */
+.workshop-panel.is-collapsed { display: none !important; }
+.game-ui:has(.mode-button[data-mode="drive"].is-active) .workshop-panel { display: none !important; }
+.game-ui:has(.mode-button[data-mode="workshop"].is-active) .drive-readout { display: none !important; }
+.game-ui:has(.mode-button[data-mode="workshop"].is-active) .drive-controls { display: none !important; }
+
+/* Compact driving telemetry. */
+.drive-readout { transform: scale(.72); transform-origin: left top; gap: 4px !important; padding: 6px 8px !important; min-height: 36px !important; }
+.drive-readout strong { font-size: 24px !important; line-height: 1 !important; }
+.gear-selector { gap: 1px !important; }
+.gear-button { width: 20px !important; height: 20px !important; font-size: 8px !important; }
+.ignition-button { margin-left: 3px !important; padding: 5px !important; font-size: 7px !important; }
 .drive-controls { left: 12px !important; right: 12px !important; bottom: 10px !important; }
 .drive-control { min-width: 48px !important; height: 44px !important; font-size: 10px !important; }
 .gas-control { min-width: 58px !important; }
 .workshop-panel { max-height: calc(100% - 150px) !important; }
 @media (max-width: 700px) {
-  .drive-readout { top: 58px !important; left: 8px !important; transform: scale(.66); transform-origin: left top; }
+  .drive-readout { top: 58px !important; left: 8px !important; transform: scale(.62); }
   .drive-controls { left: 8px !important; right: 8px !important; bottom: 8px !important; }
   .drive-control { min-width: 44px !important; height: 40px !important; }
   .gas-control { min-width: 54px !important; }
@@ -44,7 +50,7 @@ body.force-landscape > #game > .game-shell { position: absolute; width: 100dvh; 
   .part-row { min-height: 40px !important; padding: 5px !important; font-size: 10px !important; }
 }
 @media (orientation: landscape) and (max-height: 600px) {
-  .drive-readout { bottom: 7px !important; top: auto !important; left: 50% !important; transform: translateX(-50%) scale(.68) !important; transform-origin: center bottom; }
+  .drive-readout { bottom: 7px !important; top: auto !important; left: 50% !important; transform: translateX(-50%) scale(.64) !important; transform-origin: center bottom; }
   .drive-controls { bottom: 7px !important; }
   .drive-control { min-width: 42px !important; height: 38px !important; }
   .gas-control { min-width: 52px !important; }
