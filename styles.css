@@ -107,7 +107,7 @@ h1 em { color: var(--acid); font-style: normal; }
 .toast.is-visible { transform: translate(-50%, 0); opacity: 1; }
 .drive-controls { position: absolute; right: 28px; bottom: 25px; display: flex; align-items: end; justify-content: space-between; gap: 18px; padding: 12px; border: 1px solid rgba(255,255,255,.14); background: rgba(17,25,22,.76); pointer-events: auto; }
 .steer-pad, .pedal-pad { display: flex; align-items: end; gap: 7px; }
-.drive-controls button { min-width: 46px; min-height: 46px; border: 1px solid rgba(255,255,255,.28); border-radius: 50%; color: white; background: rgba(255,255,255,.07); font-size: 16px; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.drive-controls button { min-width: 46px; min-height: 46px; border: 1px solid rgba(255,255,255,.28); border-radius: 50%; color: white; background: rgba(255,255,255,.07); font-size: 16px; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 .drive-controls button:hover, .drive-controls button:active, .drive-controls button.is-pressed { border-color: var(--acid); background: rgba(217,243,106,.23); }
 .drive-controls .brake-control, .drive-controls .reverse-control { min-width: 58px; padding: 0 8px; border-radius: 7px; font-size: 8px; font-weight: 800; }
 .drive-controls .gas-control { min-width: 64px; height: 58px; border-color: rgba(217,243,106,.75); color: var(--acid); font-size: 9px; font-weight: 800; }
