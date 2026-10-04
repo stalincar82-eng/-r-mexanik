@@ -237,3 +237,54 @@ h1 em { color: var(--acid); font-style: normal; }
   .orientation-lock h2 { margin:0 0 8px; font-family:"Barlow Condensed",sans-serif; font-size:34px; }
   .orientation-lock p { max-width:320px; margin:0; color:#9aa7a0; font-size:13px; line-height:1.5; }
 }
+
+
+/* LANDSCAPE MOBILE MODE — the whole phone game is designed for horizontal screens. */
+@media (pointer: coarse) {
+  html, body, #game, .game-shell { width:100vw; height:100dvh; min-width:100vw; min-height:100dvh; }
+  .start-screen { padding:18px 5vw; }
+  .start-content { width:min(700px,78vw); margin:auto 0; }
+  .start-content h1 { font-size:clamp(48px,8vw,78px); margin:10px 0 14px; }
+  .intro-copy { max-width:560px; margin:12px 0 20px; font-size:13px; }
+  .device-options { grid-template-columns:1fr 1fr; max-width:700px; }
+  .device-choice { min-height:64px; }
+  .start-footer { font-size:8px; }
+
+  .topbar { height:58px; padding:0 18px; }
+  .mini-brand .brand-mark { width:28px; height:28px; font-size:18px; }
+  .mini-brand small { display:none; }
+  .car-choice-label { top:10px; left:50%; transform:translateX(-50%); z-index:5; display:flex; align-items:center; gap:8px; }
+  .car-selector { width:180px; min-width:180px; height:34px; padding:5px 20px 5px 8px; }
+  .mode-switch { top:10px; left:auto; right:118px; transform:none; }
+  .mode-button { min-height:34px; padding:0 11px; font-size:10px; }
+  .top-status { font-size:0; }
+  .top-status .status-light { margin-right:0; }
+  .icon-button { width:30px; height:30px; margin-left:8px; }
+
+  .drive-readout { top:72px; left:18px; padding:8px 11px; gap:6px; }
+  .drive-readout strong { font-size:30px; }
+  .workshop-panel { top:72px; right:18px; width:min(330px,34vw); max-height:calc(100dvh - 150px); padding:13px; }
+  .help-button { top:72px; right:18px; min-height:36px; }
+  .help-panel { top:116px; right:18px; width:min(330px,40vw); max-height:calc(100dvh - 145px); }
+  .drive-hint { display:none !important; }
+  .desktop-help { display:none !important; }
+  .mobile-help { display:grid !important; }
+  .corner-note { right:18px; bottom:14px; }
+
+  .drive-controls {
+    left:18px; right:18px; bottom:12px;
+    display:flex; align-items:end; justify-content:space-between;
+    gap:18px; padding:0; border:0; background:transparent;
+  }
+  .steer-pad { display:flex; gap:8px; }
+  .pedal-pad { display:grid; grid-template-columns:78px 78px; grid-template-rows:48px 58px; gap:8px; }
+  .drive-controls .drive-control { width:62px; height:62px; min-width:62px; min-height:62px; border-radius:16px; }
+  .steer-pad .steer-control { width:72px; height:72px; min-width:72px; min-height:72px; font-size:28px; }
+  .pedal-pad .reverse-control,.pedal-pad .brake-control { width:78px; height:48px; min-width:78px; min-height:48px; border-radius:12px; font-size:9px; }
+  .pedal-pad .gas-control { grid-column:1 / -1; width:164px; height:58px; min-width:164px; min-height:58px; border-radius:14px; font-size:13px; }
+  .toast { bottom:96px; }
+}
+
+@media (pointer: coarse) and (orientation: portrait) {
+  .orientation-lock { display:flex !important; }
+}
