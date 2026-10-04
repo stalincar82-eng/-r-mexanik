@@ -421,3 +421,75 @@ body.force-landscape .workshop-panel {
   width: min(300px, 36%);
   max-height: none;
 }
+
+
+/* Final landscape HUD: one clear zone per function, no overlapping touch targets. */
+body.force-landscape .topbar {
+  height: 46px;
+  padding: 0 10px;
+}
+body.force-landscape .car-choice-label {
+  top: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+body.force-landscape .car-selector {
+  min-width: 160px;
+  height: 30px;
+  min-height: 30px;
+}
+body.force-landscape .mode-switch {
+  top: 90px;
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+}
+body.force-landscape .drive-readout {
+  top: auto;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  width: min(390px, 44%);
+  max-width: none;
+  min-height: 42px;
+  padding: 6px 9px;
+  justify-content: center;
+  z-index: 20;
+}
+body.force-landscape .drive-readout .gear-selector {
+  margin-left: 3px;
+}
+body.force-landscape .drive-readout .gear-button {
+  width: 27px;
+  height: 27px;
+}
+body.force-landscape .drive-readout .ignition-button {
+  margin-left: 4px;
+}
+body.force-landscape .help-button {
+  top: 54px;
+  right: 10px;
+  z-index: 21;
+}
+body.force-landscape .drive-hint,
+body.force-landscape .corner-note {
+  display: none;
+}
+body.force-landscape .toast {
+  bottom: 74px;
+  z-index: 30;
+}
+body.force-landscape .steer-pad {
+  left: 10px;
+  bottom: 10px;
+  z-index: 22;
+}
+body.force-landscape .pedal-pad {
+  right: 10px;
+  bottom: 10px;
+  z-index: 22;
+}
+body.force-landscape .workshop-panel {
+  z-index: 25;
+}
