@@ -333,14 +333,14 @@ body.force-landscape .help-panel {
   max-height: calc(100% - 170px);
 }
 body.force-landscape .drive-controls {
-  left: auto;
-  right: 10px;
+  left: 10px;
+  right: auto;
   bottom: 10px;
   width: auto;
-  min-height: 58px;
+  min-height: 116px;
   padding: 0;
-  gap: 14px;
-  justify-content: flex-end;
+  gap: 22px;
+  justify-content: flex-start;
   align-items: flex-end;
   background: transparent;
   border: 0;
@@ -349,46 +349,46 @@ body.force-landscape .steer-pad,
 body.force-landscape .pedal-pad {
   display: flex;
   align-items: flex-end;
-  gap: 7px;
+  gap: 12px;
 }
 body.force-landscape .drive-controls .drive-control {
-  height: 44px;
-  min-height: 44px;
-  min-width: 44px;
-  width: 44px;
+  height: 88px;
+  min-height: 88px;
+  min-width: 88px;
+  width: 88px;
   padding: 0;
-  border-radius: 7px;
+  border-radius: 10px;
   border: 1px solid rgba(255,255,255,.38);
-  background: rgba(12,18,15,.78);
+  background: rgba(12,18,15,.82);
   box-shadow: none;
-  font-size: 21px;
+  font-size: 42px;
 }
 body.force-landscape .steer-pad .steer-control {
-  height: 44px;
-  min-height: 44px;
-  width: 44px;
-  font-size: 23px;
+  height: 88px;
+  min-height: 88px;
+  width: 88px;
+  font-size: 46px;
 }
 body.force-landscape .pedal-pad .reverse-control,
 body.force-landscape .pedal-pad .brake-control {
-  height: 32px;
-  min-height: 32px;
-  width: 48px;
-  min-width: 48px;
-  padding: 0 4px;
-  border-radius: 5px;
-  font-size: 7px;
+  height: 64px;
+  min-height: 64px;
+  width: 96px;
+  min-width: 96px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 12px;
 }
 body.force-landscape .pedal-pad .gas-control {
-  height: 44px;
-  min-height: 44px;
-  width: 62px;
-  min-width: 62px;
-  border-radius: 7px;
-  font-size: 8px;
+  height: 88px;
+  min-height: 88px;
+  width: 124px;
+  min-width: 124px;
+  border-radius: 10px;
+  font-size: 14px;
 }
 body.force-landscape .drive-controls .gas-control span {
-  font-size: 12px;
+  font-size: 24px;
 }
 body.force-landscape .toast {
   bottom: 96px;
