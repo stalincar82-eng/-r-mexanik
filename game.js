@@ -427,6 +427,7 @@
       if (parts[id]) continue;
       var label = (front ? 'Переднее ' : 'Заднее ') + (side === 'L' ? 'левое' : 'правое') + ' колесо';
       var wheelPart = createPart(id, label, [wheel.group], { wheel: true, center: wheel.center });
+      wheelPart.pivot.rotation.order = 'YXZ';
       parts[id] = wheelPart;
       wheels.push(wheelPart);
     }
@@ -906,9 +907,11 @@
     speed = Math.max(-22, Math.min(68, speed));
     if (Math.abs(speed) > 0.5) heading += steering * Math.min(1.35, Math.abs(speed) / 18) * delta * (speed < 0 ? -1 : 1);
     var steeringAngle = steering * -0.42;
-    if (parts.wheelFL) parts.wheelFL.pivot.rotation.y = steeringAngle;
-    if (parts.wheelFR) parts.wheelFR.pivot.rotation.y = steeringAngle;
-    if (parts.wheelSet) parts.wheelSet.pivot.rotation.y = steeringAngle;
+    for (var steerWheelId in parts) {
+      if (parts[steerWheelId].wheel && /^wheelF/.test(steerWheelId)) {
+        parts[steerWheelId].pivot.rotation.y = steeringAngle;
+      }
+    }
     var travel = speed * delta * 0.095;
     car.position.x += Math.sin(heading) * travel;
     car.position.z += Math.cos(heading) * travel;
@@ -916,7 +919,9 @@
     distance += Math.abs(travel);
     var wheelIndex;
     for (wheelIndex = 0; wheelIndex < wheels.length; wheelIndex++) {
-      if (wheels[wheelIndex].visible) wheels[wheelIndex].pivot.rotation.x += travel / 0.34;
+      if (wheels[wheelIndex].visible) {
+        wheels[wheelIndex].pivot.rotation.x += travel / 0.34;
+      }
     }
     document.getElementById('speed-value').textContent = ('0' + Math.round(Math.abs(speed))).slice(-2);
     document.getElementById('gear-value').textContent = selectedGear;
