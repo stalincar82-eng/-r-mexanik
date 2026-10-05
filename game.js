@@ -79,6 +79,7 @@
   buildCar();
   buildWorkshop();
   buildGarageLocation();
+  buildGarageEquipment();
   bindInterface();
   updatePartsPanel();
   if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
@@ -255,6 +256,35 @@
     post.castShadow = true;
   }
 
+
+  function buildGarageEquipment() {
+    var gx = 30, gz = 0;
+    var steel = material(0x59615d, 0.72, 0.38);
+    var dark = material(0x242a28, 0.8, 0.25);
+    var yellow = material(0xd9f36a, 0.48, 0.05);
+    var red = material(0xb64a3f, 0.62, 0.18);
+    var wood = material(0x6b5540, 0.78, 0.05);
+    var posts = [[-3.7,-2.9],[-3.7,2.9],[3.7,-2.9],[3.7,2.9]];
+    for (var i = 0; i < posts.length; i++) {
+      box(scene, 0.22, 3.9, 0.22, 0x59615d, gx + posts[i][0], 1.95, gz + posts[i][1], steel);
+      box(scene, 0.62, 0.12, 0.38, 0xd9f36a, gx + posts[i][0], 3.82, gz + posts[i][1], yellow);
+    }
+    box(scene, 7.6, 0.12, 0.42, 0x59615d, gx, 0.18, gz - 2.55, steel);
+    box(scene, 7.6, 0.12, 0.42, 0x59615d, gx, 0.18, gz + 2.55, steel);
+    box(scene, 4.6, 0.16, 0.72, 0x6b5540, gx - 5.7, 1.35, gz + 5.55, wood);
+    box(scene, 1.55, 2.8, 0.7, 0x424946, gx + 6.4, 1.4, gz + 5.65, dark);
+    box(scene, 1.1, 0.14, 0.62, 0xb64a3f, gx - 6.3, 0.28, gz - 5.45, red);
+    box(scene, 0.18, 0.03, 5.8, 0xd9f36a, gx - 2.0, 0.11, gz, yellow);
+    box(scene, 0.18, 0.03, 5.8, 0xd9f36a, gx + 2.0, 0.11, gz, yellow);
+    for (i = 0; i < 4; i++) {
+      var tire = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.16, 10, 20), dark);
+      tire.rotation.y = Math.PI / 2;
+      tire.position.set(gx - 7.5 + i * 0.78, 0.72, gz + 3.95);
+      tire.castShadow = true;
+      scene.add(tire);
+    }
+  }
+
   function buildCar() {
     car = new THREE.Group();
     scene.add(car);
@@ -325,6 +355,7 @@
       car.add(model);
       model.updateMatrixWorld(true);
       discoverCarParts(model);
+      restoreGarageState();
       updatePartsPanel();
     }, undefined, function (error) {
       if (request !== loadRequest) return;
@@ -332,6 +363,32 @@
       showWarning('Не удалось загрузить ' + modelInfo.label + '. Проверь файл модели и обнови страницу.');
     });
   }
+
+  function garageStateKey() { return 'motornaya-garage-state-' + selectedCar; }
+  function saveGarageState() {
+    try {
+      var state = {};
+      Object.keys(parts).forEach(function(id) { var part = parts[id]; if (part) state[id] = {visible: part.visible !== false, isOpen: !!part.isOpen}; });
+      localStorage.setItem(garageStateKey(), JSON.stringify(state));
+    } catch (e) {}
+  }
+  function restoreGarageState() {
+    try {
+      var raw = localStorage.getItem(garageStateKey());
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      Object.keys(state).forEach(function(id) {
+        var saved = state[id], part = parts[id];
+        if (!part) return;
+        part.visible = saved.visible !== false;
+        if (part.object) part.object.visible = part.visible;
+        part.isOpen = !!saved.isOpen && part.visible;
+        part.targetAngle = part.isOpen ? part.angle : 0;
+        if (part.recess) part.recess.visible = part.isOpen;
+      });
+    } catch (e) {}
+  }
+
   function discoverCarParts(model) {
     var candidates = [];
     model.traverse(function (node) {
@@ -977,6 +1034,7 @@
     }
     if (object.wheel && Math.abs(speed) > 0) speed = 0;
     updatePartsPanel();
+    saveGarageState();
     showToast(object.label + (object.visible ? ' установлена' : ' снята'));
   }
 
@@ -986,6 +1044,7 @@
     setPartOpen(object, !object.isOpen);
     if (object.recess) object.recess.visible = object.isOpen;
     updatePartsPanel();
+    saveGarageState();
     showToast(object.label + (object.isOpen ? ' открыта' : ' закрыта'));
   }
 
