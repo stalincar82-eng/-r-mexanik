@@ -18,13 +18,10 @@ jobs:
 
       - name: Patch BMW wheel geometry before publishing
         shell: pwsh
+        env:
+          PATCH_BLOB: 'eNqVVU1v1DAQvedXDDklJERwQ2xzaNFKIKQKUcRlVSFvMtkaEjvYDt2l3f/eybfzUaHuJWvPvDczz+NxpmQBJTN3Od8DL0qpDHylpVPG9cdzD6zA6Jd2fUfHZaSQpT8NHo2HIpEpF4fYrUz25j3ZBWKaY+xC8zugLNCoU6TRfBYpHj0uUp6g9jeuwzNw/zIFiSxKltT22gIxCLyHS6XYqfeOchQHc0cgENIAF6A/ODX/PpfJ79h1u3A1m8KClUTycN444+4LYlioSvA/Ff5ARcV+lJUwBHzbO2RSgTdEbKprzPb6AqbstjEIfHjouNpwWlYq6cL1fB1+N+JuNwOIFPQaw24BvYU4jqmAFDMuMPXheb9lmUEwxpgqZ+dByOdIe/h5rlXHdmmM4vvK4DU1VnOeDUXE+n29rs2Ao9gLyG6NfKbWqznP4yPM9yJW98WqhRssbvg/9KkQYbiocDPJshercxuyXDKs4pqG7JpzNamIwmqjqsRI5S278/U8AX8MMxyBzNMW8wVPtfTNGdpytykNbpTPdVXsUXk20g/rLAePthFsB0v42flLgd1NspYX89Qt4/SmWE3Z6LUb81jUD8HIQv064YB1icci/kNn13d2lv/s2TfE8NZ6NLSY6qP//unbdhtdVVmGaomskwznmYWLYoRUBcvJlPr+/DryYQxOb/fGoVHqdHelneTjwAXFuEa4OWmKuT1y47mWS0YNmNL8b3SNNb0RZc4S9FqXsJ3UQb965ztldK/oMrTviA6XL8kT60EtpQ=='
         run: |
-          $blob = 'eNqVVU1v1DAQvedXDDklJERwQ2xzaNFKIKQKUcRlVSFvMtkaEjvYDt2l3f/eybfzUaHuJWvPvDczz+NxpmQBJTN3Od8DL0qpDHylpVPG9cdzD6zA6Jd2fUfHZaSQpT8NHo2HIpEpF4fYrUz25j3ZBWKaY+xC8zugLNCoU6TRfBYpHj0uUp6g9jeuwzNw/zIFiSxKltT22gIxCLyHS6XYqfeOchQHc0cgENIAF6A/ODX/PpfJ79h1u3A1m8KClUTycN444+4LYlioSvA/Ff5ARcV+lJUwBHzbO2RSgTdEbKprzPb6AqbstjEIfHjouNpwWlYq6cL1fB1+N+JuNwOIFPQaw24BvYU4jqmAFDMuMPXheb9lmUEwxpgqZ+dByOdIe/h5rlXHdmmM4vvK4DU1VnOeDUXE+n29rs2Ao9gLyG6NfKbWqznP4yPM9yJW98WqhRssbvg/9KkQYbiocDPJshercxuyXDKs4pqG7JpzNamIwmqjqsRI5S278/U8AX8MMxyBzNMW8wVPtfTNGdpytykNbpTPdVXsUXk20g/rLAePthFsB0v42flLgd1NspYX89Qt4/SmWE3Z6LUb81jUD8HIQv064YB1icci/kNn13d2lv/s2TfE8NZ6NLSY6qP//unbdhtdVVmGaomskwznmYWLYoRUBcvJlPr+/DryYQxOb/fGoVHqdHelneTjwAXFuEa4OWmKuT1y47mWS0YNmNL8b3SNNb0RZc4S9FqXsJ3UQb965ztldK/oMrTviA6XL8kT60EtpQ=='
-          $bytes = [Convert]::FromBase64String($blob)
-          $bytes = [IO.Compression.DeflateStream]::new([IO.MemoryStream]::new($bytes), [IO.Compression.CompressionMode]::Decompress)
-          $out = New-Object IO.MemoryStream
-          $bytes.CopyTo($out)
-          [IO.File]::WriteAllBytes('patch_wheels.py', $out.ToArray())
+          python -c "import os,base64,zlib;open('patch_wheels.py','wb').write(zlib.decompress(base64.b64decode(os.environ['PATCH_BLOB'])))"
           python patch_wheels.py
           Remove-Item patch_wheels.py
           git config user.name 'github-actions[bot]'
