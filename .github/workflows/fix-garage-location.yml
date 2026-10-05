@@ -1,0 +1,56 @@
+name: Add real garage location transition
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch garage location transition
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('game.js')
+          s = p.read_text()
+
+          if 'var garageReturnPosition' not in s:
+              s = s.replace("  var cameraPosition;\n", "  var cameraPosition;\n  var garageReturnPosition = new THREE.Vector3();\n  var garageReturnHeading = 0;\n  var garageLocationActive = false;\n")
+
+          marker = "    driving = mode === 'drive';\n"
+          patch = """    if (mode === 'workshop' && !garageLocationActive) {
+      garageReturnPosition.copy(car.position);
+      garageReturnHeading = heading;
+      speed = 0;
+      heading = 0;
+      steering = 0;
+      car.position.set(-2.5, 0, -0.5);
+      car.rotation.y = 0;
+      garageLocationActive = true;
+    } else if (mode === 'drive' && garageLocationActive) {
+      speed = 0;
+      car.position.copy(garageReturnPosition);
+      heading = garageReturnHeading;
+      car.rotation.y = heading;
+      garageLocationActive = false;
+    }
+    driving = mode === 'drive';
+"""
+          if marker not in s:
+              raise SystemExit('setMode marker not found')
+          if "garageLocationActive = true;" not in s:
+              s = s.replace(marker, patch, 1)
+
+          p.write_text(s)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add game.js
+          git commit -m "Move car into real garage location" || exit 0
+          git push
