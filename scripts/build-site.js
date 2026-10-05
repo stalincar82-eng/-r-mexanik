@@ -10,7 +10,7 @@ const files = [
   'game.js',
   'styles.css',
   'car-animation.js',
-  'chevrolet_camaro_1967_animated.glb'
+  '1967_chevrolet_camaro_ss_350_coupe.glb'
 ];
 
 function copyFile(relativePath) {
