@@ -6,6 +6,7 @@
   var CAMARO_URL = '1967_chevrolet_camaro_ss_350_coupe.glb';
   var CAMARO_LABEL = 'CHEVROLET CAMARO · 1967 SS 350';
   var camaroRims = [];
+  var camaroScene = null;
 
   function isRimNode(node) {
     return !!(node && node.name && /Rim_Main/i.test(node.name));
@@ -13,61 +14,110 @@
 
   function normalizeCamaroWheelNodes(scene) {
     if (!scene || scene.__motornayaCamaroWheelsNormalized) return;
+    camaroScene = scene;
     camaroRims = [];
 
-    /* Do not rename the tyre meshes. game.js must see their original tire/tyre
-       names so it can split the four real wheels correctly. For the rims,
-       keep only the top-level Rim_Main group/mesh for each physical wheel;
-       nested Rim_Main children are parts of the same rim and must not become
-       separate wheels. */
+    /* Keep every Rim_Main candidate. Some Camaro exports put the four rims
+       inside a common parent, so rejecting nested Rim_Main nodes can leave
+       only one physical rim available. The binder below chooses one real
+       rim per wheel by world-space proximity. */
     scene.traverse(function (node) {
-      if (!isRimNode(node)) return;
-      var ancestor = node.parent;
-      while (ancestor && ancestor !== scene) {
-        if (isRimNode(ancestor)) return;
-        ancestor = ancestor.parent;
-      }
-      camaroRims.push(node);
+      if (isRimNode(node)) camaroRims.push(node);
     });
 
     scene.__motornayaCamaroRims = camaroRims;
     scene.__motornayaCamaroWheelsNormalized = true;
   }
 
-  function rimCenter(node) {
+  function boundsCenter(node) {
     var bounds = new THREE.Box3().setFromObject(node);
     return bounds.isEmpty() ? null : bounds.getCenter(new THREE.Vector3());
   }
 
-  function bindRimToSteeringPivot(pivot, tire) {
-    if (!pivot || !tire || !camaroRims.length || pivot.__motornayaCamaroRimBound) return;
+  function boundsVolume(node) {
+    var bounds = new THREE.Box3().setFromObject(node);
+    if (bounds.isEmpty()) return 0;
+    var size = bounds.getSize(new THREE.Vector3());
+    return size.x * size.y * size.z;
+  }
 
-    var tireBounds = new THREE.Box3().setFromObject(tire);
-    if (tireBounds.isEmpty()) return;
-    var tireCenter = tireBounds.getCenter(new THREE.Vector3());
+  function findActualTireMeshes() {
+    var tires = [];
+    if (!camaroScene) return tires;
+    camaroScene.traverse(function (node) {
+      if (!node || !node.name || !node.isMesh || !node.visible) return;
+      /* splitTireMesh creates exactly four visible meshes named *_wheel_0..3
+         and parents each one to the steering/spin pivot. */
+      if (!/_wheel_[0-3]$/i.test(node.name)) return;
+      if (!/tire|tyre/i.test(node.name)) return;
+      if (!node.parent) return;
+      tires.push(node);
+    });
+    return tires;
+  }
 
-    var best = null;
-    var bestDistance = Infinity;
-    for (var i = 0; i < camaroRims.length; i++) {
-      var rim = camaroRims[i];
-      if (!rim || rim.__motornayaRimBound) continue;
-      var center = rimCenter(rim);
-      if (!center) continue;
-      var distance = center.distanceTo(tireCenter);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = rim;
+  function bindAllCamaroRims() {
+    if (!camaroScene || !camaroRims.length) return false;
+
+    var tires = findActualTireMeshes();
+    if (tires.length < 4) return false;
+
+    var available = camaroRims.slice();
+    var bound = 0;
+
+    /* Process each actual tire and choose the nearest unused Rim_Main node.
+       If several nodes occupy the same wheel, prefer the largest node because
+       it is normally the parent carrying the complete visible rim assembly. */
+    for (var tireIndex = 0; tireIndex < tires.length; tireIndex++) {
+      var tire = tires[tireIndex];
+      var tireCenter = boundsCenter(tire);
+      if (!tireCenter) continue;
+
+      var best = null;
+      var bestDistance = Infinity;
+      var bestVolume = -1;
+      for (var rimIndex = 0; rimIndex < available.length; rimIndex++) {
+        var rim = available[rimIndex];
+        if (!rim || rim.__motornayaRimBound) continue;
+        var center = boundsCenter(rim);
+        if (!center) continue;
+        var distance = center.distanceTo(tireCenter);
+        var volume = boundsVolume(rim);
+        if (distance < bestDistance - 0.02 || (Math.abs(distance - bestDistance) <= 0.02 && volume > bestVolume)) {
+          best = rim;
+          bestDistance = distance;
+          bestVolume = volume;
+        }
       }
+
+      /* Camaro is already scaled by game.js. A real rim is virtually at the
+         tire centre; anything much farther away is body/chrome geometry. */
+      if (!best || bestDistance > 1.25) continue;
+
+      var spinPivot = tire.parent;
+      if (!spinPivot) continue;
+      spinPivot.updateMatrixWorld(true);
+      best.updateMatrixWorld(true);
+      spinPivot.attach(best);
+      best.__motornayaRimBound = true;
+      spinPivot.__motornayaCamaroRimBound = true;
+      bound++;
     }
 
-    /* Never steal a distant body/chrome object. */
-    if (!best || bestDistance > 1.15) return;
+    return bound >= 4;
+  }
 
-    pivot.updateMatrixWorld(true);
-    best.updateMatrixWorld(true);
-    pivot.attach(best);
-    best.__motornayaRimBound = true;
-    pivot.__motornayaCamaroRimBound = true;
+  function scheduleRimBinding() {
+    /* game.js creates/splits the wheel meshes inside its GLTF onLoad callback.
+       Run after that callback, then retry briefly so all four pivots are present. */
+    var delays = [0, 40, 120, 300, 700, 1200];
+    for (var i = 0; i < delays.length; i++) {
+      (function (delay) {
+        setTimeout(function () {
+          if (bindAllCamaroRims()) return;
+        }, delay);
+      })(delays[i]);
+    }
   }
 
   function hookWheelPivotAttachment() {
@@ -75,11 +125,10 @@
     var originalAttach = THREE.Object3D.prototype.attach;
     THREE.Object3D.prototype.attach = function (object) {
       originalAttach.call(this, object);
-      if (object && object.name && /tire|tyre/i.test(object.name)) {
-        /* game.js calls attach() on the spinPivot immediately after creating
-           each wheel. Bind exactly one physical Camaro rim to that same pivot.
-           No position reset is performed: attach() preserves world position. */
-        bindRimToSteeringPivot(this, object);
+      /* Keep the old immediate path as a fast first pass. The post-load
+         reconciliation above is authoritative and catches all four wheels. */
+      if (object && object.name && /tire|tyre/i.test(object.name) && camaroRims.length) {
+        bindAllCamaroRims();
       }
     };
     THREE.Object3D.prototype.__motornayaCamaroAttachHooked = true;
@@ -105,6 +154,7 @@
         normalizeCamaroWheelNodes(gltf && gltf.scene);
         startMixer(gltf);
         if (onLoad) onLoad(gltf);
+        scheduleRimBinding();
       }, onProgress, onError);
     };
     THREE.GLTFLoader.__motornayaCamaroHooked = true;
