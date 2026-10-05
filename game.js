@@ -326,7 +326,6 @@
       showWarning('Не удалось загрузить ' + modelInfo.label + '. Проверь файл модели и обнови страницу.');
     });
   }
-
   function discoverCarParts(model) {
     var candidates = [];
     model.traverse(function (node) {
@@ -426,8 +425,7 @@
     var maximumZ = -Infinity;
     for (var boundIndex = 0; boundIndex < wheelBounds.length; boundIndex++) {
       minimumX = Math.min(minimumX, wheelBounds[boundIndex].center.x);
-      maximumX = Math.max(maximumX, wheelBounds[boundIndex].center.x);
-      minimumZ = Math.min(minimumZ, wheelBounds[boundIndex].center.z);
+      maximumX = Math.max(maximumX, wheelBounds[boundIndex].center.x);      minimumZ = Math.min(minimumZ, wheelBounds[boundIndex].center.z);
       maximumZ = Math.max(maximumZ, wheelBounds[boundIndex].center.z);
     }
     var centerX = (minimumX + maximumX) / 2;
@@ -464,59 +462,37 @@
   }
 
   function attachWheelAccessories(model) {
-    /* Only pick a true rim/disc: it must be very close to the axle and have two
-       nearly equal large dimensions (the circular face). This intentionally avoids
-       broad body panels such as bumpers and headlights. */
-    var wheelRoots = [];
-    for (var rootIndex = 0; rootIndex < wheels.length; rootIndex++) {
-      var rootGroup = wheels[rootIndex].groups && wheels[rootIndex].groups[0];
-      if (rootGroup) wheelRoots.push(rootGroup);
-    }
-    var meshes = [];
+    /* BMW M3 GTR: the GLB contains explicit wheel parts. The old spatial
+       detector could grab unrelated body geometry. Attach only the actual
+       Disk_L/Disk_R nodes (and their child mesh) to the nearest wheel pivot. */
+    var diskNodes = [];
     model.traverse(function (node) {
-      if (!node.isMesh) return;
-      var nodeName = node.name || '';
-      if (/steering|wheelhouse|brake|caliper|headlight|lamp|light|bumper|fender|grille|body|hood|bonnet|door|window|mirror|chassis/i.test(nodeName)) return;
-      var insideWheel = false;
-      for (var i = 0; i < wheelRoots.length; i++) {
-        if (wheelRoots[i] === node || wheelRoots[i].getObjectById(node.id)) { insideWheel = true; break; }
+      if (!node || !node.name) return;
+      if (/^m:SM_Disk_[LR]_0000_001_SM_Disk_[LR]_0000_001_MAT_Details_Disk(?:_009)?_/i.test(node.name)) {
+        diskNodes.push(node);
       }
-      if (insideWheel) return;
-      var bounds = new THREE.Box3().setFromObject(node);
-      if (bounds.isEmpty()) return;
-      meshes.push({ mesh: node, center: bounds.getCenter(new THREE.Vector3()), size: bounds.getSize(new THREE.Vector3()) });
     });
 
-    for (var meshIndex = 0; meshIndex < meshes.length; meshIndex++) {
-      var item = meshes[meshIndex];
-      var itemName = item.mesh.name || '';
-      var namedDisc = /rim|wheel[_ -]?disc|disc[_ -]?wheel|disk|alloy|hubcap/i.test(itemName) &&
-        !/brake|caliper|steering|wheelhouse|headlight|lamp|light|bumper|fender|grille|body/i.test(itemName);
+    for (var diskIndex = 0; diskIndex < diskNodes.length; diskIndex++) {
+      var disk = diskNodes[diskIndex];
+      var bounds = new THREE.Box3().setFromObject(disk);
+      if (bounds.isEmpty()) continue;
+      var center = bounds.getCenter(new THREE.Vector3());
       var best = null;
-      var bestScore = Infinity;
+      var bestDistance = Infinity;
+
       for (var wheelIndex = 0; wheelIndex < wheels.length; wheelIndex++) {
         var wheel = wheels[wheelIndex];
-        var axis = (wheel.wheelSpinAxisVector || new THREE.Vector3(1, 0, 0)).clone().normalize();
-        var delta = item.center.clone().sub(wheel.wheelCenter);
-        var axial = Math.abs(delta.dot(axis));
-        var radial = delta.clone().sub(axis.clone().multiplyScalar(delta.dot(axis))).length();
-        var radius = wheel.wheelRadius || 0.45;
-        var dims = [item.size.x, item.size.y, item.size.z].sort(function(a,b){ return b-a; });
-        var roundness = dims[0] / Math.max(dims[1], 0.001);
-        var discLike = dims[1] >= radius * 0.55 &&
-          dims[0] <= radius * 2.8 &&
-          roundness <= 1.55 &&
-          dims[2] <= radius * 0.65;
-        var closeEnough = radial <= radius * (namedDisc ? 0.95 : 0.28) &&
-          axial <= radius * (namedDisc ? 1.05 : 0.48);
-        var validShape = namedDisc || discLike;
-        var score = radial / radius + axial / radius + (namedDisc ? -2 : 0);
-        if (closeEnough && validShape && score < bestScore) {
-          bestScore = score;
+        var distanceToWheel = center.distanceTo(wheel.wheelCenter);
+        if (distanceToWheel < bestDistance) {
+          bestDistance = distanceToWheel;
           best = wheel;
         }
       }
-      if (best) (best.spinPivot || best.pivot).attach(item.mesh);
+
+      if (best && best.spinPivot) {
+        best.spinPivot.attach(disk);
+      }
     }
   }
 
@@ -546,8 +522,7 @@
 
     var middle = new THREE.Vector3().addVectors(minimum, maximum).multiplyScalar(0.5);
     var centers = [
-      new THREE.Vector3(minimum.x, middle.y, minimum.z),
-      new THREE.Vector3(minimum.x, middle.y, maximum.z),
+      new THREE.Vector3(minimum.x, middle.y, minimum.z),      new THREE.Vector3(minimum.x, middle.y, maximum.z),
       new THREE.Vector3(maximum.x, middle.y, minimum.z),
       new THREE.Vector3(maximum.x, middle.y, maximum.z)
     ];
