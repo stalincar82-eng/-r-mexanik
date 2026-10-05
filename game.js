@@ -440,12 +440,18 @@
       if (parts[id]) continue;
       var label = (front ? 'Переднее ' : 'Заднее ') + (side === 'L' ? 'левое' : 'правое') + ' колесо';
       var wheelAxisWorld = getWheelSpinAxis(wheel.bounds);
-      var wheelAxisLocal = wheelAxisWorld.clone().applyQuaternion(car.quaternion.clone().invert()).normalize();
       var wheelPart = createPart(id, label, [wheel.group], {
         wheel: true,
         center: wheel.center,
-        wheelSpinAxisVector: wheelAxisLocal
+        wheelSpinAxisVector: new THREE.Vector3(1, 0, 0)
       });
+      /* The GLB is rotated inside the car group. Convert the real axle from
+         world space into the wheel spin pivot's parent space, not car space. */
+      wheelPart.spinPivot.updateMatrixWorld(true);
+      var wheelParentQuaternion = wheelPart.spinPivot.parent.getWorldQuaternion(new THREE.Quaternion());
+      wheelPart.wheelSpinAxisVector = wheelAxisWorld.clone()
+        .applyQuaternion(wheelParentQuaternion.invert())
+        .normalize();
       var wheelSize = wheel.bounds.getSize(new THREE.Vector3());
       wheelPart.wheelRadius = Math.max(wheelSize.x, wheelSize.y, wheelSize.z) * 0.5;
       wheelPart.pivot.rotation.order = 'YXZ';
@@ -1016,13 +1022,8 @@
       var spinTarget = wheelPart.spinPivot || wheelPart.pivot;
       spinTarget.rotateOnAxis(spinAxis, spin);
     }
-    /* The BMW rims/discs are separate GLB nodes. Rotate the actual visible
-       disk nodes too, using the axle expressed in each disk's local space. */
-    for (var diskIndex = 0; diskIndex < wheelDisks.length; diskIndex++) {
-      var diskVisual = wheelDisks[diskIndex];
-      if (!diskVisual.wheel.visible) continue;
-      diskVisual.node.rotateOnAxis(diskVisual.axis, spin);
-    }
+    /* Rims/discs are children of the wheel spin pivot, so they now
+       rotate together with the tire around the same real axle. */
     document.getElementById('speed-value').textContent = ('0' + Math.round(Math.abs(speed))).slice(-2);
     document.getElementById('gear-value').textContent = selectedGear;
     document.getElementById('top-status-text').textContent = engineRunning ? 'ДВИГАТЕЛЬ ВКЛЮЧЁН' : 'ДВИГАТЕЛЬ ВЫКЛЮЧЕН';
