@@ -22,6 +22,7 @@
   var renderer;
   var car;
   var wheels = [];
+  var wheelDisks = [];
   var selectedCar = 'bmw';
   var loadRequest = 0;
   var pointerDown = false;
@@ -290,6 +291,7 @@
         });
       }
       wheels = [];
+      wheelDisks = [];
       parts = {};
 
       var model = gltf.scene;
@@ -492,6 +494,15 @@
 
       if (best && best.spinPivot) {
         best.spinPivot.attach(disk);
+        /* Keep a direct reference to the visible disk and calculate its local
+           axle after reparenting. This avoids relying on the imported node's
+           original axis and is the same pivot hierarchy recommended by Three.js. */
+        best.spinPivot.updateMatrixWorld(true);
+        disk.updateMatrixWorld(true);
+        var diskWorldAxis = getWheelSpinAxis(bounds);
+        var diskWorldQuaternion = disk.getWorldQuaternion(new THREE.Quaternion());
+        var diskLocalAxis = diskWorldAxis.clone().applyQuaternion(diskWorldQuaternion.clone().invert()).normalize();
+        wheelDisks.push({ node: disk, axis: diskLocalAxis, wheel: best });
       }
     }
   }
@@ -1004,6 +1015,13 @@
       var spinAxis = wheelPart.wheelSpinAxisVector || new THREE.Vector3(1, 0, 0);
       var spinTarget = wheelPart.spinPivot || wheelPart.pivot;
       spinTarget.rotateOnAxis(spinAxis, spin);
+    }
+    /* The BMW rims/discs are separate GLB nodes. Rotate the actual visible
+       disk nodes too, using the axle expressed in each disk's local space. */
+    for (var diskIndex = 0; diskIndex < wheelDisks.length; diskIndex++) {
+      var diskVisual = wheelDisks[diskIndex];
+      if (!diskVisual.wheel.visible) continue;
+      diskVisual.node.rotateOnAxis(diskVisual.axis, spin);
     }
     document.getElementById('speed-value').textContent = ('0' + Math.round(Math.abs(speed))).slice(-2);
     document.getElementById('gear-value').textContent = selectedGear;
