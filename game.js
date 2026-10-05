@@ -860,7 +860,7 @@
     if (!driving && !garageMode) {
       savedDrivePosition = car.position.clone();
       savedDriveHeading = heading;
-      car.position.set(30, 0, -2.5);
+      car.position.set(30, 0, 0);
       car.rotation.y = 0;
       heading = 0;
       cameraOrbit = 0;
