@@ -1,6 +1,7 @@
 /* Моторная — Chevrolet Camaro 1967 model bridge. */
 (function () {
   'use strict';
+
   var mixers = [];
   var last = performance.now();
   var CAMARO_URL = '1967_chevrolet_camaro_ss_350_coupe.glb';
@@ -20,8 +21,8 @@
 
   function boundsCenter(node) {
     if (!node) return null;
-    var b = new THREE.Box3().setFromObject(node);
-    return b.isEmpty() ? null : b.getCenter(new THREE.Vector3());
+    var bounds = new THREE.Box3().setFromObject(node);
+    return bounds.isEmpty() ? null : bounds.getCenter(new THREE.Vector3());
   }
 
   function normalizeCamaroWheelNodes(scene) {
@@ -53,8 +54,8 @@
   function collectWheelPivots(tires) {
     var pivots = [];
     for (var i = 0; i < tires.length; i++) {
-      var p = tires[i].parent;
-      if (p && pivots.indexOf(p) === -1) pivots.push(p);
+      var pivot = tires[i].parent;
+      if (pivot && pivots.indexOf(pivot) === -1) pivots.push(pivot);
     }
     return pivots.length === 4 ? pivots : [];
   }
@@ -67,9 +68,14 @@
 
     var triangleCount = Math.floor(index.count / 3);
     var vertexTriangles = new Array(position.count);
-    for (var i = 0; i < position.count; i++) vertexTriangles[i] = [];
-    for (var t = 0; t < triangleCount; t++) {
-      for (var c = 0; c < 3; c++) vertexTriangles[index.getX(t * 3 + c)].push(t);
+    var i;
+    for (i = 0; i < position.count; i++) vertexTriangles[i] = [];
+
+    var t;
+    for (t = 0; t < triangleCount; t++) {
+      for (var c = 0; c < 3; c++) {
+        vertexTriangles[index.getX(t * 3 + c)].push(t);
+      }
     }
 
     var visited = new Uint8Array(triangleCount);
@@ -98,36 +104,55 @@
     return components;
   }
 
-  function makeComponentMesh(source, component, index) {
+  function componentCenter(source, component) {
+    var position = source.geometry.attributes.position;
+    var index = source.geometry.index;
+    var center = new THREE.Vector3();
+    var count = 0;
+    for (var i = 0; i < component.triangles.length; i++) {
+      var tri = component.triangles[i];
+      for (var c = 0; c < 3; c++) {
+        center.add(new THREE.Vector3().fromBufferAttribute(position, index.getX(tri * 3 + c)));
+        count++;
+      }
+    }
+    center.multiplyScalar(1 / Math.max(1, count));
+    return center.applyMatrix4(source.matrixWorld);
+  }
+
+  function makeMergedMesh(source, components, name) {
     var srcGeo = source.geometry;
     var srcIndex = srcGeo.index;
     var remap = {};
     var indices = [];
     var vertexCount = 0;
-    var triangles = component.triangles;
+    var i;
 
-    for (var i = 0; i < triangles.length; i++) {
-      var tri = triangles[i];
-      for (var c = 0; c < 3; c++) {
-        var oldIndex = srcIndex.getX(tri * 3 + c);
-        if (remap[oldIndex] === undefined) remap[oldIndex] = vertexCount++;
-        indices.push(remap[oldIndex]);
+    for (i = 0; i < components.length; i++) {
+      var triangles = components[i].triangles;
+      for (var t = 0; t < triangles.length; t++) {
+        var tri = triangles[t];
+        for (var c = 0; c < 3; c++) {
+          var oldIndex = srcIndex.getX(tri * 3 + c);
+          if (remap[oldIndex] === undefined) remap[oldIndex] = vertexCount++;
+          indices.push(remap[oldIndex]);
+        }
       }
     }
 
     var geo = new THREE.BufferGeometry();
-    for (var name in srcGeo.attributes) {
-      var attr = srcGeo.attributes[name];
+    for (var attributeName in srcGeo.attributes) {
+      var attr = srcGeo.attributes[attributeName];
       if (!attr || !attr.array || !attr.itemSize) continue;
       var array = new attr.array.constructor(vertexCount * attr.itemSize);
       for (var key in remap) {
         var oldVertex = Number(key);
         var newVertex = remap[key];
-        for (var j = 0; j < attr.itemSize; j++) {
-          array[newVertex * attr.itemSize + j] = attr.array[oldVertex * attr.itemSize + j];
+        for (var componentIndex = 0; componentIndex < attr.itemSize; componentIndex++) {
+          array[newVertex * attr.itemSize + componentIndex] = attr.array[oldVertex * attr.itemSize + componentIndex];
         }
       }
-      geo.setAttribute(name, new THREE.BufferAttribute(array, attr.itemSize, attr.normalized));
+      geo.setAttribute(attributeName, new THREE.BufferAttribute(array, attr.itemSize, attr.normalized));
     }
     geo.setIndex(indices);
     geo.computeBoundingBox();
@@ -135,7 +160,7 @@
 
     var mesh = source.clone(false);
     mesh.geometry = geo;
-    mesh.name = source.name + '_fixed_wheel_' + index;
+    mesh.name = name;
     mesh.visible = true;
     mesh.matrixAutoUpdate = false;
     mesh.matrix.copy(source.matrixWorld);
@@ -143,102 +168,111 @@
     return mesh;
   }
 
-  function sourceComponents() {
-    var sources = camaroSourceTires.slice();
-    if (!sources.length && camaroScene) {
-      camaroScene.traverse(function (node) {
-        if (isTireNode(node) && !/_wheel_(?:[0-3]|fixed_[0-3])$/i.test(node.name)) sources.push(node);
-      });
+  function sourceDirectMeshes() {
+    var direct = [];
+    for (var i = 0; i < camaroSourceTires.length; i++) {
+      var center = boundsCenter(camaroSourceTires[i]);
+      if (center) direct.push({ source: camaroSourceTires[i], center: center });
     }
-    if (!sources.length) return [];
-
-    /* If the GLB already contains four physical tire meshes, never split them. */
-    if (sources.length >= 4) {
-      var direct = [];
-      for (var i = 0; i < sources.length; i++) {
-        var center = boundsCenter(sources[i]);
-        if (center) direct.push({ source: sources[i], direct: true, center: center });
-      }
-      if (direct.length >= 4) return direct.slice(0, 4);
-    }
-
-    /* The Camaro file normally has one mesh containing four disconnected tire components. */
-    var source = sources[0];
-    var parts = extractConnectedComponents(source);
-    if (parts.length < 4) return [];
-    source.updateMatrixWorld(true);
-    var result = [];
-    for (i = 0; i < parts.length; i++) {
-      var component = parts[i];
-      var centerLocal = new THREE.Vector3();
-      var count = 0;
-      var position = source.geometry.attributes.position;
-      var index = source.geometry.index;
-      for (var t = 0; t < component.triangles.length; t++) {
-        var tri = component.triangles[t];
-        for (var c = 0; c < 3; c++) {
-          centerLocal.add(new THREE.Vector3().fromBufferAttribute(position, index.getX(tri * 3 + c)));
-          count++;
-        }
-      }
-      centerLocal.multiplyScalar(1 / Math.max(1, count));
-      var centerWorld = centerLocal.clone().applyMatrix4(source.matrixWorld);
-      result.push({ source: source, component: component, direct: false, center: centerWorld });
-    }
-    result.sort(function (a, b) { return b.component.triangles.length - a.component.triangles.length; });
-    return result.slice(0, 4);
+    return direct;
   }
 
   function repairCamaroWheels() {
     if (wheelsRepaired || !camaroScene) return false;
+
     var currentTires = collectCurrentTireMeshes();
     var pivots = collectWheelPivots(currentTires);
     if (pivots.length !== 4) return false;
 
-    var components = sourceComponents();
-    if (components.length !== 4) return false;
-
+    for (var p = 0; p < pivots.length; p++) pivots[p].updateMatrixWorld(true);
     var pivotCenters = pivots.map(boundsCenter);
-    var used = {};
-    var assignments = [];
-    for (var i = 0; i < components.length; i++) {
-      var best = -1;
-      var bestDistance = Infinity;
-      for (var p = 0; p < pivots.length; p++) {
-        if (used[p]) continue;
-        var d = components[i].center.distanceTo(pivotCenters[p]);
-        if (d < bestDistance) { bestDistance = d; best = p; }
+
+    /* If the GLB has four physical tire meshes, keep every tire whole. */
+    var direct = sourceDirectMeshes();
+    if (direct.length >= 4) {
+      direct.sort(function (a, b) { return a.center.z - b.center.z; });
+      var usedDirect = {};
+      for (var di = 0; di < 4; di++) {
+        var bestDirect = -1;
+        var bestDistance = Infinity;
+        for (var dj = 0; dj < direct.length; dj++) {
+          if (usedDirect[dj]) continue;
+          var dd = direct[dj].center.distanceTo(pivotCenters[di]);
+          if (dd < bestDistance) { bestDistance = dd; bestDirect = dj; }
+        }
+        if (bestDirect < 0) return false;
+        usedDirect[bestDirect] = true;
+        var directMesh = direct[bestDirect].source;
+        directMesh.visible = true;
+        directMesh.updateMatrixWorld(true);
+        pivots[di].attach(directMesh);
       }
-      if (best < 0) return false;
-      used[best] = true;
-      assignments.push({ component: components[i], pivot: pivots[best] });
+    } else {
+      /* One source mesh may contain 5+ disconnected pieces. Never discard the
+         extra piece: assign every component to one of the four wheel pivots.
+         This is what fixes the Camaro front-left tire that was being cut in half. */
+      var source = camaroSourceTires[0];
+      if (!source || !source.geometry || !source.geometry.index) return false;
+      source.updateMatrixWorld(true);
+      var components = extractConnectedComponents(source);
+      if (components.length < 4) return false;
+
+      var records = [];
+      for (var ci = 0; ci < components.length; ci++) {
+        records.push({ component: components[ci], center: componentCenter(source, components[ci]) });
+      }
+
+      /* Seed each wheel with its closest unique component so every wheel gets
+         one complete base component before smaller/extra pieces are assigned. */
+      var groups = [[], [], [], []];
+      var usedComponents = {};
+      for (p = 0; p < 4; p++) {
+        var seed = -1;
+        var seedDistance = Infinity;
+        for (ci = 0; ci < records.length; ci++) {
+          if (usedComponents[ci]) continue;
+          var seedDistanceNow = records[ci].center.distanceTo(pivotCenters[p]);
+          if (seedDistanceNow < seedDistance) {
+            seedDistance = seedDistanceNow;
+            seed = ci;
+          }
+        }
+        if (seed < 0) return false;
+        usedComponents[seed] = true;
+        groups[p].push(records[seed].component);
+      }
+
+      /* Assign all remaining components to the nearest wheel. This deliberately
+         keeps both halves of a wheel together instead of taking only the four
+         largest components. */
+      for (ci = 0; ci < records.length; ci++) {
+        if (usedComponents[ci]) continue;
+        var bestPivot = 0;
+        var bestRemainingDistance = Infinity;
+        for (p = 0; p < 4; p++) {
+          var remainingDistance = records[ci].center.distanceTo(pivotCenters[p]);
+          if (remainingDistance < bestRemainingDistance) {
+            bestRemainingDistance = remainingDistance;
+            bestPivot = p;
+          }
+        }
+        groups[bestPivot].push(records[ci].component);
+      }
+
+      for (p = 0; p < 4; p++) {
+        var merged = makeMergedMesh(source, groups[p], source.name + '_fixed_wheel_' + p);
+        pivots[p].updateMatrixWorld(true);
+        pivots[p].attach(merged);
+      }
     }
 
-    for (i = 0; i < assignments.length; i++) {
-      var a = assignments[i];
-      var mesh;
-      if (a.component.direct) {
-        mesh = a.component.source;
-        if (!mesh.parent) camaroScene.add(mesh);
-        mesh.updateMatrixWorld(true);
-        a.pivot.updateMatrixWorld(true);
-        a.pivot.attach(mesh);
-        mesh.visible = true;
-      } else {
-        mesh = makeComponentMesh(a.component.source, a.component.component, i);
-        a.pivot.updateMatrixWorld(true);
-        a.pivot.attach(mesh);
-      }
-    }
-
-    for (i = 0; i < currentTires.length; i++) {
-      var old = currentTires[i];
+    for (var ti = 0; ti < currentTires.length; ti++) {
+      var old = currentTires[ti];
       if (old.parent) old.parent.remove(old);
       if (old.geometry) old.geometry.dispose();
     }
-
-    for (i = 0; i < camaroSourceTires.length; i++) {
-      if (camaroSourceTires[i]) camaroSourceTires[i].visible = false;
+    for (var si = 0; si < camaroSourceTires.length; si++) {
+      camaroSourceTires[si].visible = false;
     }
 
     wheelsRepaired = true;
@@ -257,7 +291,7 @@
     var bound = 0;
     for (var i = 0; i < tires.length; i++) {
       var tireCenter = boundsCenter(tires[i]);
-      if (!tireCenter) continue;
+      if (!tireCenter || !tires[i].parent) continue;
       var best = null;
       var bestDistance = Infinity;
       for (var r = 0; r < available.length; r++) {
@@ -266,9 +300,12 @@
         var rimCenter = boundsCenter(rim);
         if (!rimCenter) continue;
         var distance = rimCenter.distanceTo(tireCenter);
-        if (distance < bestDistance) { bestDistance = distance; best = rim; }
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = rim;
+        }
       }
-      if (!best || bestDistance > 1.5 || !tires[i].parent) continue;
+      if (!best || bestDistance > 1.5) continue;
       tires[i].parent.updateMatrixWorld(true);
       best.updateMatrixWorld(true);
       tires[i].parent.attach(best);
