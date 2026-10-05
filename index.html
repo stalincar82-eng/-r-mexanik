@@ -27,7 +27,7 @@
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="car-animation.js?v=car-animation-20261006-5"></script>
+  <script src="car-animation.js?v=car-animation-20261006-6"></script>
   <script defer src="game.js?v=mobile-start-fix-20261005-10"></script>
 </head>
 <body>
@@ -35,7 +35,6 @@
     <div class="game-shell">
     <div id="scene" class="scene" aria-label="Трёхмерный город и автомобиль"></div>
     <div class="scene-grain" aria-hidden="true"></div>
-
     <section id="start-screen" class="start-screen">
       <div class="start-topline"><span class="brand-mark">М</span><span>МОТОРНАЯ <i> / </i> ОТКРЫТЫЙ ГОРОД</span></div>
       <div class="start-content">
@@ -53,7 +52,6 @@
       </div>
       <div class="start-footer"><span>БЕСПЛАТНАЯ БРАУЗЕРНАЯ ДЕМО</span><span>BUILD 01 / 2026</span></div>
     </section>
-
     <section id="game-ui" class="game-ui is-hidden" aria-label="Игровой интерфейс">
       <header class="topbar"><div class="mini-brand"><span class="brand-mark">М</span><span>МОТОРНАЯ<small>BMW M3 GTR</small></span></div><label class="car-choice-label" for="car-selector">АВТОМОБИЛЬ<select id="car-selector" class="car-selector" aria-label="Выбрать автомобиль"><option value="bmw">BMW M3 GTR</option><option value="volvo">Volvo S60 R · 2004</option><option value="audi">Audi S4 · 2006</option></select></label><nav class="mode-switch" aria-label="Режим игры"><button class="mode-button is-active" data-mode="drive" type="button"><span class="mode-symbol">↗</span>Ехать</button><button class="mode-button" data-mode="workshop" type="button"><span class="mode-symbol">⌁</span>Гараж</button></nav><div class="top-status"><span class="status-light"></span><span id="top-status-text">МАШИНА ГОТОВА</span><button id="exit-button" class="icon-button" type="button" title="На стартовый экран" aria-label="На стартовый экран">×</button></div></header>
       <div class="drive-readout"><span class="readout-label">СКОРОСТЬ</span><strong id="speed-value">00</strong><span class="speed-unit">км/ч</span><span class="readout-divider"></span><span class="gear-label">ПЕРЕДАЧА</span><strong id="gear-value">D</strong><nav class="gear-selector" aria-label="Передача"><button class="gear-button" data-gear="P" type="button">P</button><button class="gear-button" data-gear="R" type="button">R</button><button class="gear-button" data-gear="N" type="button">N</button><button class="gear-button is-active" data-gear="D" type="button">D</button></nav><button id="ignition-button" class="ignition-button" type="button">ЗАГЛУШИТЬ</button></div>
