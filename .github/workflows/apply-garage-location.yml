@@ -1,0 +1,52 @@
+name: Apply garage location transition
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch game.js
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('game.js')
+          s = p.read_text()
+          if 'garageReturnPosition' in s:
+              raise SystemExit(0)
+          s = s.replace('  var cameraPosition;\n', '  var cameraPosition;\n  var garageReturnPosition = new THREE.Vector3();\n  var garageReturnHeading = 0;\n  var garageLocationActive = false;\n', 1)
+          old = "    driving = mode === 'drive';\n"
+          new = """    if (mode === 'workshop' && !garageLocationActive) {
+      garageReturnPosition.copy(car.position);
+      garageReturnHeading = heading;
+      speed = 0;
+      heading = 0;
+      steering = 0;
+      car.position.set(-2.5, 0, -0.5);
+      car.rotation.y = 0;
+      garageLocationActive = true;
+    } else if (mode === 'drive' && garageLocationActive) {
+      speed = 0;
+      car.position.copy(garageReturnPosition);
+      heading = garageReturnHeading;
+      car.rotation.y = heading;
+      garageLocationActive = false;
+    }
+    driving = mode === 'drive';
+"""
+          if old not in s:
+              raise SystemExit('setMode line not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add game.js
+          git commit -m "Move car into garage location" || true
+          git push
