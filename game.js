@@ -1011,8 +1011,8 @@
     var mobile = document.body.classList.contains('device-mobile') || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
     cameraTarget.set(car.position.x, mobile ? 0.5 : 0.65, car.position.z);
     var cameraHeading = heading + 0.32 + cameraOrbit;
-    var offsetX = driving ? Math.sin(cameraHeading) * 5.2 : 7;
-    var offsetZ = driving ? -Math.cos(cameraHeading) * 6.8 : 8;
+    var offsetX = driving ? Math.sin(cameraHeading) * 5.2 : 3.8;
+    var offsetZ = driving ? -Math.cos(cameraHeading) * 6.8 : 4.2;
     cameraPosition.set(car.position.x + offsetX, (mobile ? 3.5 : 3.1) + cameraElevation, car.position.z + offsetZ);
     camera.position.lerp(cameraPosition, Math.min(1, delta * (driving ? 2.7 : 3.5)));
     camera.lookAt(cameraTarget);
