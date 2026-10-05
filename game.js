@@ -446,16 +446,15 @@
         center: wheel.center,
         wheelSpinAxisVector: new THREE.Vector3(1, 0, 0)
       });
-      /* Fallback axle from the tire geometry. For BMW, attachWheelAccessories()
-         replaces this with the exact GLB brake-disc axle before attachment. */
-      wheelPart.spinPivot.updateMatrixWorld(true);
-      var pivotWorldQuaternion = wheelPart.spinPivot.getWorldQuaternion(new THREE.Quaternion());
-      var localAxle = wheelAxisWorld.clone()
-        .applyQuaternion(pivotWorldQuaternion.invert())
-        .normalize();
-      wheelPart.spinPivot.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(
-        new THREE.Vector3(1, 0, 0), localAxle
-      )).normalize();
+      /* The imported BMW tire meshes can arrive on the wrong plane.
+         Re-orient the actual tire around its center so its geometric axle
+         becomes the car's LOCAL X axis. The spin animation then uses that
+         same axle and cannot leave the tire lying flat. */
+      var axleToCarX = new THREE.Quaternion().setFromUnitVectors(
+        wheelAxisWorld.clone().normalize(),
+        new THREE.Vector3(1, 0, 0)
+      );
+      wheelPart.spinPivot.quaternion.copy(axleToCarX).normalize();
       wheelPart.spinPivot.updateMatrixWorld(true);
       wheelPart.wheelSpinAxisVector.set(1, 0, 0);
       var wheelSize = wheel.bounds.getSize(new THREE.Vector3());
@@ -505,22 +504,15 @@
       }
 
       if (best && best.spinPivot) {
-        /* The BMW disk is the authoritative axle reference. Align the wheel
-           pivot's LOCAL X to the disk's real world axle BEFORE attaching it. */
-        var diskWorldAxis = getWheelSpinAxis(bounds);
-        best.spinPivot.updateMatrixWorld(true);
-        var pivotQuaternion = best.spinPivot.getWorldQuaternion(new THREE.Quaternion());
-        var diskLocalAxle = diskWorldAxis.clone()
-          .applyQuaternion(pivotQuaternion.invert())
-          .normalize();
-        best.spinPivot.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(
-          new THREE.Vector3(1, 0, 0), diskLocalAxle
-        )).normalize();
+        /* Put the BMW disk on the same already-aligned wheel pivot.
+           The imported disk node has its own horizontal orientation; after
+           attach(), reset only its node rotation so its local axle follows
+           the pivot's LOCAL X axle. */
         best.spinPivot.updateMatrixWorld(true);
         disk.updateMatrixWorld(true);
-        /* attach() keeps the GLB disk's world transform while moving it under
-           the same axle pivot as the tire. */
         best.spinPivot.attach(disk);
+        disk.quaternion.identity();
+        disk.updateMatrixWorld(true);
         wheelDisks.push({ node: disk, wheel: best });
       }
     }
