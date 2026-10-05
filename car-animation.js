@@ -6,6 +6,16 @@
   var CAMARO_URL = '1967_chevrolet_camaro_ss_350_coupe.glb';
   var CAMARO_LABEL = 'CHEVROLET CAMARO · 1967 SS 350';
 
+  function normalizeCamaroWheelNodes(scene) {
+    if (!scene || scene.__motornayaCamaroWheelsNormalized) return;
+    var wheelIndex = 0;
+    scene.traverse(function (node) {
+      if (!node || !node.name || !/tire|tyre/i.test(node.name)) return;
+      node.name = 'CAMARO_WHEEL_GROUP_' + wheelIndex++;
+    });
+    scene.__motornayaCamaroWheelsNormalized = true;
+  }
+
   function startMixer(gltf) {
     if (!gltf || !gltf.scene || !gltf.animations || !gltf.animations.length || !window.THREE) return;
     var mixer = new THREE.AnimationMixer(gltf.scene);
@@ -22,6 +32,7 @@
       var actualUrl = String(url || '');
       if (/^(?:\.\/)?(?:car-model|chevrolet_camaro_1967_animated)\.glb(?:\?.*)?$/i.test(actualUrl)) actualUrl = CAMARO_URL;
       return originalLoad.call(this, actualUrl, function (gltf) {
+        normalizeCamaroWheelNodes(gltf && gltf.scene);
         startMixer(gltf);
         if (onLoad) onLoad(gltf);
       }, onProgress, onError);
