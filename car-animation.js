@@ -7,6 +7,7 @@
   var CAMARO_LABEL = 'CHEVROLET CAMARO · 1967 SS 350';
   var camaroRims = [];
   var camaroScene = null;
+  var tiresRepaired = false;
 
   function isRimNode(node) {
     return !!(node && node.name && /Rim_Main/i.test(node.name));
@@ -16,15 +17,9 @@
     if (!scene || scene.__motornayaCamaroWheelsNormalized) return;
     camaroScene = scene;
     camaroRims = [];
-
-    /* Keep every Rim_Main candidate. Some Camaro exports put the four rims
-       inside a common parent, so rejecting nested Rim_Main nodes can leave
-       only one physical rim available. The binder below chooses one real
-       rim per wheel by world-space proximity. */
     scene.traverse(function (node) {
       if (isRimNode(node)) camaroRims.push(node);
     });
-
     scene.__motornayaCamaroRims = camaroRims;
     scene.__motornayaCamaroWheelsNormalized = true;
   }
@@ -46,9 +41,7 @@
     if (!camaroScene) return tires;
     camaroScene.traverse(function (node) {
       if (!node || !node.name || !node.isMesh || !node.visible) return;
-      /* splitTireMesh creates exactly four visible meshes named *_wheel_0..3
-         and parents each one to the steering/spin pivot. */
-      if (!/_wheel_[0-3]$/i.test(node.name)) return;
+      if (!/_wheel_(?:[0-3]|fixed_[0-3])$/i.test(node.name)) return;
       if (!/tire|tyre/i.test(node.name)) return;
       if (!node.parent) return;
       tires.push(node);
@@ -56,23 +49,175 @@
     return tires;
   }
 
+  /* The old game.js splitter divides one tire across the X axis. A real tire
+     is thick along X, so that can literally cut a wheel in half. The original
+     Camaro tire mesh is one disconnected component per physical wheel.
+     Rebuild the four wheels from connected triangle components instead. */
+  function repairCamaroTires() {
+    if (tiresRepaired || !camaroScene) return false;
+
+    var splitMeshes = [];
+    var sourceMeshes = [];
+    camaroScene.traverse(function (node) {
+      if (!node || !node.isMesh || !node.name) return;
+      if (/_wheel_[0-3]$/i.test(node.name) && /tire|tyre/i.test(node.name)) splitMeshes.push(node);
+      if (!/_wheel_/i.test(node.name) && /tire|tyre/i.test(node.name)) sourceMeshes.push(node);
+    });
+    if (splitMeshes.length < 4 || !sourceMeshes.length) return false;
+
+    splitMeshes.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var pivots = [];
+    for (var i = 0; i < splitMeshes.length; i++) {
+      var pivot = splitMeshes[i].parent;
+      if (!pivot || pivots.indexOf(pivot) !== -1) continue;
+      pivots.push(pivot);
+    }
+    if (pivots.length !== 4) return false;
+
+    var source = sourceMeshes[0];
+    var position = source.geometry && source.geometry.attributes && source.geometry.attributes.position;
+    var index = source.geometry && source.geometry.index;
+    if (!position || !index || index.count < 12) return false;
+    source.updateMatrixWorld(true);
+
+    var triangleCount = Math.floor(index.count / 3);
+    var vertexTriangles = new Array(position.count);
+    var t;
+    for (t = 0; t < position.count; t++) vertexTriangles[t] = [];
+    for (t = 0; t < triangleCount; t++) {
+      for (var k = 0; k < 3; k++) {
+        var vertexIndex = index.getX(t * 3 + k);
+        vertexTriangles[vertexIndex].push(t);
+      }
+    }
+
+    var visited = new Uint8Array(triangleCount);
+    var components = [];
+    for (t = 0; t < triangleCount; t++) {
+      if (visited[t]) continue;
+      var queue = [t];
+      visited[t] = 1;
+      var triangles = [];
+      while (queue.length) {
+        var current = queue.pop();
+        triangles.push(current);
+        for (var corner = 0; corner < 3; corner++) {
+          var v = index.getX(current * 3 + corner);
+          var neighbours = vertexTriangles[v];
+          for (var n = 0; n < neighbours.length; n++) {
+            var neighbour = neighbours[n];
+            if (!visited[neighbour]) {
+              visited[neighbour] = 1;
+              queue.push(neighbour);
+            }
+          }
+        }
+      }
+      if (triangles.length >= 12) {
+        var center = new THREE.Vector3();
+        var count = 0;
+        for (var ci = 0; ci < triangles.length; ci++) {
+          var tri = triangles[ci];
+          for (var cornerIndex = 0; cornerIndex < 3; cornerIndex++) {
+            var p = new THREE.Vector3().fromBufferAttribute(position, index.getX(tri * 3 + cornerIndex));
+            source.localToWorld(p);
+            center.add(p);
+            count++;
+          }
+        }
+        center.multiplyScalar(1 / Math.max(1, count));
+        components.push({ triangles: triangles, center: center });
+      }
+    }
+
+    components.sort(function (a, b) { return b.triangles.length - a.triangles.length; });
+    if (components.length < 4) return false;
+    components = components.slice(0, 4);
+
+    var pivotCenters = pivots.map(function (pivot) {
+      return boundsCenter(pivot) || new THREE.Vector3();
+    });
+    var used = {};
+    var assignments = [];
+    for (var componentIndex = 0; componentIndex < components.length; componentIndex++) {
+      var bestPivot = -1;
+      var bestDistance = Infinity;
+      for (var pivotIndex = 0; pivotIndex < pivots.length; pivotIndex++) {
+        if (used[pivotIndex]) continue;
+        var distance = components[componentIndex].center.distanceTo(pivotCenters[pivotIndex]);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestPivot = pivotIndex;
+        }
+      }
+      if (bestPivot < 0) return false;
+      used[bestPivot] = true;
+      assignments.push({ component: components[componentIndex], pivot: pivots[bestPivot] });
+    }
+
+    for (var assignmentIndex = 0; assignmentIndex < assignments.length; assignmentIndex++) {
+      var assignment = assignments[assignmentIndex];
+      var componentTriangles = assignment.component.triangles;
+      var geometry = new THREE.BufferGeometry();
+      var remap = {};
+      var indices = [];
+      var uniqueVertexCount = 0;
+      var triIndex;
+      for (triIndex = 0; triIndex < componentTriangles.length; triIndex++) {
+        var triangleIndex = componentTriangles[triIndex];
+        for (var corner2 = 0; corner2 < 3; corner2++) {
+          var sourceVertex = index.getX(triangleIndex * 3 + corner2);
+          if (remap[sourceVertex] === undefined) remap[sourceVertex] = uniqueVertexCount++;
+          indices.push(remap[sourceVertex]);
+        }
+      }
+      for (var attributeName in source.geometry.attributes) {
+        var sourceAttribute = source.geometry.attributes[attributeName];
+        if (!sourceAttribute || !sourceAttribute.array || !sourceAttribute.itemSize) continue;
+        var array = new sourceAttribute.array.constructor(uniqueVertexCount * sourceAttribute.itemSize);
+        for (var oldKey in remap) {
+          var oldIndex = Number(oldKey);
+          var newIndex = remap[oldKey];
+          for (var componentIndex2 = 0; componentIndex2 < sourceAttribute.itemSize; componentIndex2++) {
+            array[newIndex * sourceAttribute.itemSize + componentIndex2] = sourceAttribute.array[oldIndex * sourceAttribute.itemSize + componentIndex2];
+          }
+        }
+        geometry.setAttribute(attributeName, new THREE.BufferAttribute(array, sourceAttribute.itemSize, sourceAttribute.normalized));
+      }
+      geometry.setIndex(indices);
+      geometry.computeBoundingBox();
+      geometry.computeBoundingSphere();
+
+      var fixed = source.clone(false);
+      fixed.geometry = geometry;
+      fixed.name = source.name + '_fixed_wheel_' + assignmentIndex;
+      fixed.visible = true;
+      fixed.matrixAutoUpdate = true;
+      fixed.applyMatrix4(source.matrixWorld);
+      assignment.pivot.attach(fixed);
+    }
+
+    for (var oldIndex = 0; oldIndex < splitMeshes.length; oldIndex++) {
+      var oldMesh = splitMeshes[oldIndex];
+      if (oldMesh.parent) oldMesh.parent.remove(oldMesh);
+      if (oldMesh.geometry) oldMesh.geometry.dispose();
+    }
+    source.visible = false;
+    tiresRepaired = true;
+    return true;
+  }
+
   function bindAllCamaroRims() {
     if (!camaroScene || !camaroRims.length) return false;
-
     var tires = findActualTireMeshes();
     if (tires.length < 4) return false;
 
     var available = camaroRims.slice();
     var bound = 0;
-
-    /* Process each actual tire and choose the nearest unused Rim_Main node.
-       If several nodes occupy the same wheel, prefer the largest node because
-       it is normally the parent carrying the complete visible rim assembly. */
     for (var tireIndex = 0; tireIndex < tires.length; tireIndex++) {
       var tire = tires[tireIndex];
       var tireCenter = boundsCenter(tire);
       if (!tireCenter) continue;
-
       var best = null;
       var bestDistance = Infinity;
       var bestVolume = -1;
@@ -89,11 +234,7 @@
           bestVolume = volume;
         }
       }
-
-      /* Camaro is already scaled by game.js. A real rim is virtually at the
-         tire centre; anything much farther away is body/chrome geometry. */
       if (!best || bestDistance > 1.25) continue;
-
       var spinPivot = tire.parent;
       if (!spinPivot) continue;
       spinPivot.updateMatrixWorld(true);
@@ -103,18 +244,16 @@
       spinPivot.__motornayaCamaroRimBound = true;
       bound++;
     }
-
     return bound >= 4;
   }
 
   function scheduleRimBinding() {
-    /* game.js creates/splits the wheel meshes inside its GLTF onLoad callback.
-       Run after that callback, then retry briefly so all four pivots are present. */
     var delays = [0, 40, 120, 300, 700, 1200];
     for (var i = 0; i < delays.length; i++) {
       (function (delay) {
         setTimeout(function () {
-          if (bindAllCamaroRims()) return;
+          repairCamaroTires();
+          bindAllCamaroRims();
         }, delay);
       })(delays[i]);
     }
@@ -125,11 +264,7 @@
     var originalAttach = THREE.Object3D.prototype.attach;
     THREE.Object3D.prototype.attach = function (object) {
       originalAttach.call(this, object);
-      /* Keep the old immediate path as a fast first pass. The post-load
-         reconciliation above is authoritative and catches all four wheels. */
-      if (object && object.name && /tire|tyre/i.test(object.name) && camaroRims.length) {
-        bindAllCamaroRims();
-      }
+      if (object && object.name && /tire|tyre/i.test(object.name) && camaroRims.length) bindAllCamaroRims();
     };
     THREE.Object3D.prototype.__motornayaCamaroAttachHooked = true;
     return true;
