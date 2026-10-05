@@ -5,32 +5,80 @@
   var last = performance.now();
   var CAMARO_URL = '1967_chevrolet_camaro_ss_350_coupe.glb';
   var CAMARO_LABEL = 'CHEVROLET CAMARO · 1967 SS 350';
+  var camaroModelRoot = null;
+  var camaroRims = [];
 
   function normalizeCamaroWheelNodes(scene) {
     if (!scene || scene.__motornayaCamaroWheelsNormalized) return;
     var wheelIndex = 0;
-    var rimIndex = 0;
+    camaroRims = [];
     scene.traverse(function (node) {
       if (!node || !node.name) return;
 
-      /* Keep the tyre parent names intact so game.js can discover the real
-         wheel geometry, but give the tyre mesh a stable marker for debugging. */
+      /* Mark only the real tyre meshes. Do NOT rename the Camaro rim nodes:
+         game.js has a legacy BMW disk detector, and leaving the rim names
+         untouched lets this bridge exclusively control their attachment. */
       if (/tire|tyre/i.test(node.name) && node.isMesh) {
         node.name = 'CAMARO_WHEEL_GROUP_' + wheelIndex++;
         return;
       }
 
-      /* The Camaro GLB uses _group1M_Rim_Main_* nodes for the four actual
-         rims. game.js already has a wheel-pivot attachment path for explicit
-         disk nodes, so normalize these four names to that path. */
-      if (/Rim_Main/i.test(node.name)) {
-        var side = (rimIndex % 2 === 0) ? 'L' : 'R';
-        node.name = 'm:SM_Disk_' + side + '_0000_001_SM_Disk_' + side +
-          '_0000_001_MAT_Details_Disk_009_CAMARO_' + rimIndex;
-        rimIndex++;
-      }
+      if (/Rim_Main/i.test(node.name)) camaroRims.push(node);
     });
+    camaroModelRoot = scene;
     scene.__motornayaCamaroWheelsNormalized = true;
+  }
+
+  function rimCenter(node) {
+    var bounds = new THREE.Box3().setFromObject(node);
+    return bounds.isEmpty() ? null : bounds.getCenter(new THREE.Vector3());
+  }
+
+  function bindRimToSteeringPivot(pivot, tire) {
+    if (!camaroModelRoot || !pivot || !tire || !camaroRims.length) return;
+
+    var tireBounds = new THREE.Box3().setFromObject(tire);
+    if (tireBounds.isEmpty()) return;
+    var tireCenter = tireBounds.getCenter(new THREE.Vector3());
+
+    var best = null;
+    var bestDistance = Infinity;
+    for (var i = 0; i < camaroRims.length; i++) {
+      var rim = camaroRims[i];
+      if (!rim || rim.__motornayaRimBound) continue;
+      var center = rimCenter(rim);
+      if (!center) continue;
+      var distance = center.distanceTo(tireCenter);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = rim;
+      }
+    }
+
+    /* The Camaro wheel is compact, so a rim farther than this is not the
+       matching wheel. This also prevents accidentally grabbing body chrome. */
+    if (!best || bestDistance > 0.9) return;
+
+    pivot.updateMatrixWorld(true);
+    best.updateMatrixWorld(true);
+    pivot.attach(best);
+    best.__motornayaRimBound = true;
+  }
+
+  function hookWheelPivotAttachment() {
+    if (!window.THREE || !THREE.Object3D || !THREE.Object3D.prototype.attach || THREE.Object3D.prototype.__motornayaCamaroAttachHooked) return false;
+    var originalAttach = THREE.Object3D.prototype.attach;
+    THREE.Object3D.prototype.attach = function (object) {
+      originalAttach.call(this, object);
+      if (object && object.name && /^CAMARO_WHEEL_GROUP_/i.test(object.name)) {
+        /* At this exact moment `this` is the spinPivot created by game.js.
+           Attach the matching physical rim to the same pivot, so steering and
+           wheel spin can never separate the tire from its disk. */
+        bindRimToSteeringPivot(this, object);
+      }
+    };
+    THREE.Object3D.prototype.__motornayaCamaroAttachHooked = true;
+    return true;
   }
 
   function startMixer(gltf) {
@@ -50,6 +98,7 @@
       if (/^(?:\.\/)?(?:car-model|chevrolet_camaro_1967_animated)\.glb(?:\?.*)?$/i.test(actualUrl)) actualUrl = CAMARO_URL;
       return originalLoad.call(this, actualUrl, function (gltf) {
         normalizeCamaroWheelNodes(gltf && gltf.scene);
+        camaroModelRoot = gltf && gltf.scene;
         startMixer(gltf);
         if (onLoad) onLoad(gltf);
       }, onProgress, onError);
@@ -77,10 +126,12 @@
     requestAnimationFrame(frame);
   }
 
+  hookWheelPivotAttachment();
   hookLoader();
   var tries = 0;
   var timer = setInterval(function () {
     tries++;
+    hookWheelPivotAttachment();
     if (hookLoader() || tries > 100) clearInterval(timer);
   }, 20);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', forceCamaroLabels);
