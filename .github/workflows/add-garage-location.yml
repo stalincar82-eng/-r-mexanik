@@ -1,0 +1,124 @@
+name: Add visual garage location
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch game garage location
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('game.js')
+          s = p.read_text()
+
+          if 'var garageMode = false;' not in s:
+              s = s.replace('  var cameraPosition;\n', '  var cameraPosition;\n  var garageMode = false;\n  var savedDrivePosition = new THREE.Vector3();\n  var savedDriveHeading = 0;\n')
+
+          if 'buildGarageLocation();' not in s:
+              s = s.replace('  buildWorkshop();\n', '  buildWorkshop();\n  buildGarageLocation();\n', 1)
+
+          marker = "  function bindInterface() {\n"
+          if 'function buildGarageLocation()' not in s:
+              garage = r'''  function buildGarageLocation() {
+    var gx = 30;
+    var gz = 0;
+    var floorMat = material(0x4b504e, 0.88);
+    var wallMat = material(0x606762, 0.92);
+    var trimMat = material(0x3d4541, 0.72, 0.18);
+    var whiteMat = material(0xd7d9cf, 0.7);
+    var yellowMat = material(0xd9f36a, 0.48, 0.05);
+
+    box(scene, 18, 0.12, 15, 0x3e4441, gx, -0.02, gz, floorMat);
+    box(scene, 18, 0.16, 0.35, 0xd9f36a, gx, 0.08, gz - 7.1, yellowMat);
+    box(scene, 18, 0.16, 0.35, 0xd9f36a, gx, 0.08, gz + 7.1, yellowMat);
+
+    box(scene, 0.35, 5.2, 15, 0x555d58, gx - 8.8, 2.6, gz, wallMat);
+    box(scene, 0.35, 5.2, 15, 0x555d58, gx + 8.8, 2.6, gz, wallMat);
+    box(scene, 18, 5.2, 0.35, 0x555d58, gx, 2.6, gz + 7.3, wallMat);
+    box(scene, 18, 0.35, 15, 0x3b413e, gx, 5.25, gz, trimMat);
+
+    box(scene, 7.4, 3.6, 0.12, 0x9da49e, gx, 1.8, gz - 7.28, whiteMat);
+    box(scene, 7.0, 3.15, 0.12, 0x272d2b, gx, 1.55, gz - 7.2, trimMat);
+    box(scene, 5.8, 0.5, 0.16, 0xd9f36a, gx, 4.45, gz - 7.15, yellowMat);
+
+    box(scene, 5.8, 0.08, 3.8, 0x272d2b, gx - 5.2, 0.14, gz + 1.8, trimMat);
+    box(scene, 0.16, 2.4, 0.16, 0x242a28, gx - 7.0, 1.2, gz - 3.8, trimMat);
+    box(scene, 0.16, 2.4, 0.16, 0x242a28, gx - 3.4, 1.2, gz - 3.8, trimMat);
+    box(scene, 3.9, 0.16, 0.16, 0x242a28, gx - 5.2, 2.35, gz - 3.8, trimMat);
+
+    var liftMat = material(0x454c49, 0.5, 0.55);
+    box(scene, 0.28, 1.15, 0.28, 0x747d77, gx - 2.9, 0.58, gz - 2.5, liftMat);
+    box(scene, 0.28, 1.15, 0.28, 0x747d77, gx + 2.9, 0.58, gz - 2.5, liftMat);
+    box(scene, 0.28, 1.15, 0.28, 0x747d77, gx - 2.9, 0.58, gz + 2.5, liftMat);
+    box(scene, 0.28, 1.15, 0.28, 0x747d77, gx + 2.9, 0.58, gz + 2.5, liftMat);
+    box(scene, 6.4, 0.12, 5.8, 0x68716c, gx, 0.05, gz, liftMat);
+
+    box(scene, 0.9, 1.4, 0.42, 0x424a46, gx - 6.6, 0.8, gz + 5.6, trimMat);
+    box(scene, 0.9, 1.4, 0.42, 0x424a46, gx - 5.4, 0.8, gz + 5.6, trimMat);
+    box(scene, 0.9, 1.4, 0.42, 0x424a46, gx - 4.2, 0.8, gz + 5.6, trimMat);
+    box(scene, 4.1, 0.18, 0.5, 0xd9f36a, gx - 5.4, 1.65, gz + 5.6, yellowMat);
+
+    for (var lightX = -6; lightX <= 6; lightX += 3) {
+      var lamp = box(scene, 1.2, 0.08, 0.35, 0xf4edc7, gx + lightX, 5.0, gz - 1.5, new THREE.MeshStandardMaterial({ color: 0xf4edc7, emissive: 0xaaa36f, emissiveIntensity: 0.8, roughness: 0.35 }));
+      lamp.castShadow = false;
+      var point = new THREE.PointLight(0xfff1c4, 0.75, 8);
+      point.position.set(gx + lightX, 4.8, gz - 1.5);
+      scene.add(point);
+    }
+
+    var sign = box(scene, 5.8, 0.72, 0.18, 0xd9f36a, gx, 4.45, gz + 7.12, yellowMat);
+    sign.castShadow = false;
+
+    var garageGroup = new THREE.Group();
+    garageGroup.position.set(gx, 0, gz);
+    garageGroup.name = 'garage-location';
+    scene.add(garageGroup);
+
+    return garageGroup;
+  }
+
+'''
+              s = s.replace(marker, garage + marker, 1)
+
+          old = "    driving = mode === 'drive';\n    var buttons = document.querySelectorAll('.mode-button');"
+          new = """    driving = mode === 'drive';
+    if (!driving && !garageMode) {
+      savedDrivePosition.copy(car.position);
+      savedDriveHeading = heading;
+      car.position.set(30, 0, 0);
+      car.rotation.y = 0;
+      heading = 0;
+      cameraOrbit = 0;
+      cameraElevation = 0.08;
+      garageMode = true;
+      showToast('Гараж: автомобиль перемещён в мастерскую');
+    } else if (driving && garageMode) {
+      car.position.copy(savedDrivePosition);
+      heading = savedDriveHeading;
+      car.rotation.y = heading;
+      cameraOrbit = 0;
+      cameraElevation = 0;
+      garageMode = false;
+      showToast('Выезд из гаража');
+    }
+    var buttons = document.querySelectorAll('.mode-button');"""
+          if old not in s:
+              raise SystemExit('setMode marker not found')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add game.js
+          git commit -m "Add visual garage location and garage teleport"
+          git push
