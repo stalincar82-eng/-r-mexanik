@@ -504,19 +504,23 @@
       }
 
       if (best && best.spinPivot) {
-        /* Put the BMW disk on the same already-aligned wheel pivot.
-           The imported disk node has its own horizontal orientation; after
-           attach(), reset only its node rotation so its local axle follows
-           the pivot's LOCAL X axle. */
-        best.spinPivot.updateMatrixWorld(true);
-        disk.updateMatrixWorld(true);
-        best.spinPivot.attach(disk);
-        /* Keep the imported disk orientation and local offset preserved by attach().
-           Resetting the quaternion here detached the visual rim orientation from
-           the wheel axle, so the tire could spin while the disk appeared frozen. */
-        disk.updateMatrixWorld(true);
-        wheelDisks.push({ node: disk, wheel: best });
-      }
+  best.spinPivot.updateMatrixWorld(true);
+  disk.updateMatrixWorld(true);
+
+  // Сохраняем положение диска, но делаем его дочерним
+  // объектом вращающегося pivot.
+  best.spinPivot.attach(disk);
+
+  // Диск должен вращаться вместе с колесом по LOCAL X.
+  // После attach() оставляем его положение, но задаём
+  // ориентацию относительно оси колеса.
+  disk.position.set(0, 0, 0);
+
+  wheelDisks.push({
+    node: disk,
+    wheel: best
+  });
+}
     }
   }
 
