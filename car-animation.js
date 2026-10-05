@@ -1,10 +1,10 @@
-/* Моторная — Chevrolet Camaro 1967 model + embedded GLB animation bridge. */
+/* Моторная — Chevrolet Camaro 1967 model bridge. */
 (function () {
   'use strict';
   var mixers = [];
   var last = performance.now();
-  var CAMARO_URL = 'chevrolet_camaro_1967_animated.glb';
-  var CAMARO_LABEL = 'CHEVROLET CAMARO · 1967';
+  var CAMARO_URL = '1967_chevrolet_camaro_ss_350_coupe.glb';
+  var CAMARO_LABEL = 'CHEVROLET CAMARO · 1967 SS 350';
 
   function startMixer(gltf) {
     if (!gltf || !gltf.scene || !gltf.animations || !gltf.animations.length || !window.THREE) return;
@@ -20,7 +20,7 @@
     var originalLoad = THREE.GLTFLoader.prototype.load;
     THREE.GLTFLoader.prototype.load = function (url, onLoad, onProgress, onError) {
       var actualUrl = String(url || '');
-      if (/^(?:\.\/)?car-model\.glb(?:\?.*)?$/i.test(actualUrl)) actualUrl = CAMARO_URL;
+      if (/^(?:\.\/)?(?:car-model|chevrolet_camaro_1967_animated)\.glb(?:\?.*)?$/i.test(actualUrl)) actualUrl = CAMARO_URL;
       return originalLoad.call(this, actualUrl, function (gltf) {
         startMixer(gltf);
         if (onLoad) onLoad(gltf);
