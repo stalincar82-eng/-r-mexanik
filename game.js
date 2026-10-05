@@ -36,6 +36,9 @@
   var clock;
   var cameraTarget;
   var cameraPosition;
+  var garageMode = false;
+  var savedDrivePosition = null;
+  var savedDriveHeading = 0;
 
   var orientationButton = document.getElementById('orientation-button');
   if (orientationButton) orientationButton.addEventListener('click', toggleOrientation);
@@ -75,6 +78,7 @@
   buildCity();
   buildCar();
   buildWorkshop();
+  buildGarageLocation();
   bindInterface();
   updatePartsPanel();
   if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
@@ -718,6 +722,25 @@
     box(scene, 0.2, 0.38, 0.48, 0x495751, -0.1, 0.15, -0.7, lift);
   }
 
+  function buildGarageLocation() {
+    var gx = 30;
+    var gz = 0;
+    var floorMat = material(0x4b504e, 0.88);
+    var wallMat = material(0x606762, 0.92);
+    var trimMat = material(0x3d4541, 0.72, 0.18);
+    var yellowMat = material(0xd9f36a, 0.48, 0.05);
+    box(scene, 18, 0.12, 15, 0x3e4441, gx, -0.02, gz, floorMat);
+    box(scene, 18, 5.2, 0.35, 0x555d58, gx, 2.6, gz + 7.3, wallMat);
+    box(scene, 0.35, 5.2, 15, 0x555d58, gx - 8.8, 2.6, gz, wallMat);
+    box(scene, 0.35, 5.2, 15, 0x555d58, gx + 8.8, 2.6, gz, wallMat);
+    box(scene, 18, 0.35, 15, 0x3b413e, gx, 5.25, gz, trimMat);
+    box(scene, 7.4, 3.6, 0.12, 0x9da49e, gx, 1.8, gz - 7.28, material(0x9da49e));
+    box(scene, 7.0, 3.15, 0.12, 0x272d2b, gx, 1.55, gz - 7.2, trimMat);
+    box(scene, 5.8, 0.5, 0.16, 0xd9f36a, gx, 4.45, gz - 7.15, yellowMat);
+    box(scene, 6.4, 0.12, 5.8, 0x68716c, gx, 0.05, gz, material(0x68716c, 0.5, 0.55));
+    box(scene, 4.1, 0.18, 0.5, 0xd9f36a, gx - 5.4, 1.65, gz + 5.6, yellowMat);
+  }
+
   function bindInterface() {
     var choices = document.querySelectorAll('.device-choice');
     var i;
@@ -833,9 +856,26 @@
 
   function setMode(eventOrMode) {
     var mode = typeof eventOrMode === 'string' ? eventOrMode : (eventOrMode && eventOrMode.currentTarget ? eventOrMode.currentTarget.getAttribute('data-mode') : 'drive');
-    var mode = typeof eventOrMode === 'string' ? eventOrMode : (eventOrMode && eventOrMode.currentTarget ? eventOrMode.currentTarget.getAttribute('data-mode') : 'drive');
-    var mode = typeof eventOrMode === 'string' ? eventOrMode : (eventOrMode && eventOrMode.currentTarget ? eventOrMode.currentTarget.getAttribute('data-mode') : 'drive');
     driving = mode === 'drive';
+    if (!driving && !garageMode) {
+      savedDrivePosition = car.position.clone();
+      savedDriveHeading = heading;
+      car.position.set(30, 0, 0);
+      car.rotation.y = 0;
+      heading = 0;
+      cameraOrbit = 0;
+      cameraElevation = 0.08;
+      garageMode = true;
+      showToast('Гараж: автомобиль перемещён в мастерскую');
+    } else if (driving && garageMode) {
+      if (savedDrivePosition) car.position.copy(savedDrivePosition);
+      heading = savedDriveHeading;
+      car.rotation.y = heading;
+      cameraOrbit = 0;
+      cameraElevation = 0;
+      garageMode = false;
+      showToast('Выезд из гаража');
+    }
     var buttons = document.querySelectorAll('.mode-button');
     var i;
     for (i = 0; i < buttons.length; i++) buttons[i].classList.toggle('is-active', buttons[i].getAttribute('data-mode') === mode);
