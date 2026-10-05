@@ -15,6 +15,94 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Patch BMW wheel geometry before publishing
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+
+          path = Path('game.js')
+          text = path.read_text(encoding='utf-8')
+
+          old = '''      var geometry = new THREE.BufferGeometry();
+          for (var attributeName in source.attributes) geometry.setAttribute(attributeName, source.attributes[attributeName]);
+          geometry.morphAttributes = source.morphAttributes;
+          geometry.morphTargetsRelative = source.morphTargetsRelative;
+          var indices = [];
+          '''
+          # The exact indentation is normalized below so the patch is robust.
+          old = old.replace('          ', '      ')
+          new = '''      var geometry = new THREE.BufferGeometry();
+          geometry.morphAttributes = source.morphAttributes;
+          geometry.morphTargetsRelative = source.morphTargetsRelative;
+          var indices = [];
+          '''.replace('          ', '      ')
+          if old not in text:
+              raise SystemExit('Expected splitTireMesh geometry block was not found')
+          text = text.replace(old, new, 1)
+
+          old2 = '''      geometry.setIndex(indices);
+          geometry.computeBoundingBox();
+          geometry.computeBoundingSphere();
+          '''.replace('          ', '      ')
+          new2 = '''      /* Compact each wheel partition to the vertices it actually uses.
+             Keeping the original four-wheel vertex buffer makes computeBoundingBox()
+             see unrelated wheels and produces the wrong wheel pivot. */
+          var remap = {};
+          var compactIndices = new Array(indices.length);
+          var uniqueVertexCount = 0;
+          for (var remapIndex = 0; remapIndex < indices.length; remapIndex++) {
+            var sourceVertexIndex = indices[remapIndex];
+            if (remap[sourceVertexIndex] === undefined) remap[sourceVertexIndex] = uniqueVertexCount++;
+            compactIndices[remapIndex] = remap[sourceVertexIndex];
+          }
+          for (var attributeName in source.attributes) {
+            var sourceAttribute = source.attributes[attributeName];
+            if (!sourceAttribute || !sourceAttribute.array || !sourceAttribute.itemSize) continue;
+            var itemSize = sourceAttribute.itemSize;
+            var compactArray = new sourceAttribute.array.constructor(uniqueVertexCount * itemSize);
+            for (var oldVertexKey in remap) {
+              var oldVertex = Number(oldVertexKey);
+              var newVertex = remap[oldVertexKey];
+              for (var component = 0; component < itemSize; component++) {
+                compactArray[newVertex * itemSize + component] = sourceAttribute.array[oldVertex * itemSize + component];
+              }
+            }
+            geometry.setAttribute(attributeName, new THREE.BufferAttribute(compactArray, itemSize, sourceAttribute.normalized));
+          }
+          geometry.setIndex(compactIndices);
+          geometry.computeBoundingBox();
+          geometry.computeBoundingSphere();
+          '''.replace('          ', '      ')
+          if old2 not in text:
+              raise SystemExit('Expected splitTireMesh index block was not found')
+          text = text.replace(old2, new2, 1)
+
+          old3 = '''        best.spinPivot.attach(disk);
+          disk.quaternion.identity();
+          disk.updateMatrixWorld(true);
+          '''.replace('          ', '        ')
+          new3 = '''        best.spinPivot.attach(disk);
+          /* attach() preserves the disk world transform. Keep its imported
+             wheel-face orientation instead of resetting the local quaternion. */
+          disk.updateMatrixWorld(true);
+          '''.replace('          ', '        ')
+          if old3 not in text:
+              raise SystemExit('Expected BMW disk attachment block was not found')
+          text = text.replace(old3, new3, 1)
+
+          path.write_text(text, encoding='utf-8')
+          '@ | Set-Content -Path patch_wheels.py -Encoding utf8
+          python patch_wheels.py
+          Remove-Item patch_wheels.py
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add game.js
+          git commit -m "Fix BMW wheel geometry pivots and disk orientation" || echo "No wheel patch commit needed"
+          git push
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
