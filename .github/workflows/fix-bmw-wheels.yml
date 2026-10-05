@@ -9,47 +9,41 @@ permissions:
 
 jobs:
   patch:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Patch wheel geometry and disk attachment
-        shell: python
         run: |
+          python3 - <<'PY'
           from pathlib import Path
 
           path = Path('game.js')
           text = path.read_text(encoding='utf-8')
 
-          old = """      var geometry = new THREE.BufferGeometry();
+          old = '''      var geometry = new THREE.BufferGeometry();
       for (var attributeName in source.attributes) geometry.setAttribute(attributeName, source.attributes[attributeName]);
       geometry.morphAttributes = source.morphAttributes;
       geometry.morphTargetsRelative = source.morphTargetsRelative;
       var indices = [];
-"""
-
-          new = """      var geometry = new THREE.BufferGeometry();
+'''
+          new = '''      var geometry = new THREE.BufferGeometry();
       geometry.morphAttributes = source.morphAttributes;
       geometry.morphTargetsRelative = source.morphTargetsRelative;
       var indices = [];
-"""
-
+'''
           if old not in text:
               raise SystemExit('Expected splitTireMesh geometry block was not found')
           text = text.replace(old, new, 1)
 
-          old2 = """      geometry.setIndex(indices);
+          old2 = '''      geometry.setIndex(indices);
       geometry.computeBoundingBox();
       geometry.computeBoundingSphere();
-"""
-
-          new2 = """      /* The wheel partition used to keep the full source vertex buffer while
-         changing only the index. Three.js bounding volumes are computed from
-         the attribute buffer, so every split wheel inherited the bounds of
-         the whole four-wheel mesh. Rebuild the attributes around only the
-         vertices actually referenced by this wheel before computing bounds. */
+'''
+          new2 = '''      /* Compact each wheel partition to the vertices it actually uses.
+         Keeping the original four-wheel vertex buffer makes computeBoundingBox()
+         see unrelated wheels and produces the wrong wheel pivot. */
       var remap = {};
       var compactIndices = new Array(indices.length);
       var uniqueVertexCount = 0;
@@ -75,30 +69,28 @@ jobs:
       geometry.setIndex(compactIndices);
       geometry.computeBoundingBox();
       geometry.computeBoundingSphere();
-"""
-
+'''
           if old2 not in text:
               raise SystemExit('Expected splitTireMesh index block was not found')
           text = text.replace(old2, new2, 1)
 
-          old3 = """        best.spinPivot.attach(disk);
+          old3 = '''        best.spinPivot.attach(disk);
         disk.quaternion.identity();
         disk.updateMatrixWorld(true);
-"""
-          new3 = """        best.spinPivot.attach(disk);
-        /* attach() deliberately preserves the disk's world transform.
-           Do not reset its quaternion here: that would throw away the
-           imported wheel-face orientation after the pivot has been aligned. */
+'''
+          new3 = '''        best.spinPivot.attach(disk);
+        /* attach() preserves the disk world transform. Keep its imported
+           wheel-face orientation instead of resetting the local quaternion. */
         disk.updateMatrixWorld(true);
-"""
+'''
           if old3 not in text:
               raise SystemExit('Expected BMW disk attachment block was not found')
           text = text.replace(old3, new3, 1)
 
           path.write_text(text, encoding='utf-8')
+          PY
 
       - name: Commit patched game
-        shell: bash
         run: |
           rm -f .github/workflows/fix-bmw-wheels.yml
           git config user.name "github-actions[bot]"
