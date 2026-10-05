@@ -71,11 +71,10 @@
     for (var i = 0; i < camaroTires.length; i++) {
       var tire = camaroTires[i];
       if (!tire || !tire.parent) continue;
-      /* game.js puts the whole wheel group under a steering pivot and then
-         creates spinPivot as its direct child. The tire is attached directly
-         to that spinPivot, so the immediate parent is exactly what we need. */
-      var spinPivot = tire.parent;
-      if (spinPivot && result.indexOf(spinPivot) === -1) result.push(spinPivot);
+      /* game.js fallback registers the complete physical wheel parent as a
+         group, then puts that group under steering pivot -> spinPivot. */
+      var pivot = tire.parent.parent || tire.parent;
+      if (pivot && result.indexOf(pivot) === -1) result.push(pivot);
     }
     return result;
   }
@@ -104,7 +103,7 @@
         }
       }
       if (!best || bestDistance > 1.5) continue;
-      var pivot = camaroTires[i].parent;
+      var pivot = pivots[i];
       pivot.updateMatrixWorld(true);
       best.updateMatrixWorld(true);
       pivot.attach(best);
