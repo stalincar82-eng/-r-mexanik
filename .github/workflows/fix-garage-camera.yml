@@ -19,12 +19,16 @@ jobs:
           from pathlib import Path
           p = Path('game.js')
           s = p.read_text()
-          s = s.replace("var offsetX = driving ? Math.sin(cameraHeading) * 5.2 : 7;", "var offsetX = driving ? Math.sin(cameraHeading) * 5.2 : 3.8;")
-          s = s.replace("var offsetZ = driving ? -Math.cos(cameraHeading) * 6.8 : 8;", "var offsetZ = driving ? -Math.cos(cameraHeading) * 6.8 : 4.2;")
+          old1 = "var offsetX = driving ? Math.sin(cameraHeading) * 5.2 : 7;"
+          old2 = "var offsetZ = driving ? -Math.cos(cameraHeading) * 6.8 : 8;"
+          s = s.replace(old1, "var offsetX = driving ? Math.sin(cameraHeading) * 5.2 : 3.8;")
+          s = s.replace(old2, "var offsetZ = driving ? -Math.cos(cameraHeading) * 6.8 : 4.2;")
           p.write_text(s)
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add game.js
-          git diff --cached --quiet || git commit -m "Fix garage camera framing"
-          git diff --cached --quiet || git push
+          if ! git diff --cached --quiet; then
+            git commit -m "Fix garage camera framing"
+            git push
+          fi
