@@ -603,6 +603,30 @@
         geometry.addGroup(indices.length, materialIndices.length, partitionMaterial);
         indices.push.apply(indices, materialIndices);
       }
+      var remap = {};
+      var compactIndices = new Array(indices.length);
+      var uniqueVertexCount = 0;
+      for (var remapIndex = 0; remapIndex < indices.length; remapIndex++) {
+        var sourceVertexIndex = indices[remapIndex];
+        if (remap[sourceVertexIndex] === undefined) remap[sourceVertexIndex] = uniqueVertexCount++;
+        compactIndices[remapIndex] = remap[sourceVertexIndex];
+      }
+      for (var compactAttributeName in source.attributes) {
+        var sourceAttribute = source.attributes[compactAttributeName];
+        if (!sourceAttribute || !sourceAttribute.array || !sourceAttribute.itemSize) continue;
+        var compactItemSize = sourceAttribute.itemSize;
+        var compactArray = new sourceAttribute.array.constructor(uniqueVertexCount * compactItemSize);
+        for (var oldVertexKey in remap) {
+          var oldVertex = Number(oldVertexKey), newVertex = remap[oldVertexKey];
+          for (var component = 0; component < compactItemSize; component++) {
+            compactArray[newVertex * compactItemSize + component] =
+              sourceAttribute.array[oldVertex * compactItemSize + component];
+          }
+        }
+        geometry.setAttribute(compactAttributeName,
+          new THREE.BufferAttribute(compactArray, compactItemSize, sourceAttribute.normalized));
+      }
+      indices = compactIndices;
       geometry.setIndex(indices);
       geometry.computeBoundingBox();
       geometry.computeBoundingSphere();
