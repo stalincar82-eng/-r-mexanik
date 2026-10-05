@@ -22,11 +22,29 @@
     categoryUI.addEventListener('pointerdown',function(event){var button=event.target.closest?event.target.closest('[data-garage-category]'):null;if(!button)return;event.preventDefault();event.stopPropagation();activeCategory=button.getAttribute('data-garage-category')||'other';applyCategory();},true);
     var partsList=document.getElementById('parts-list');if(partsList&&window.MutationObserver)new MutationObserver(function(){window.setTimeout(applyCategory,0);}).observe(partsList,{childList:true});applyCategory();
   }
-  function updateGarageUI(){var panel=document.getElementById('garage-camera-controls'),categoryUI=document.getElementById('garage-category-ui'),active=inGarage();if(panel)panel.style.display=active?'block':'none';if(categoryUI)categoryUI.style.display=active?'flex':'none';}
+  function enforceGaragePanel(){
+    var panel=document.getElementById('workshop-panel');
+    if(!panel)return;
+    if(!inGarage()){panel.style.removeProperty('left');panel.style.removeProperty('right');panel.style.removeProperty('top');panel.style.removeProperty('bottom');panel.style.removeProperty('width');panel.style.removeProperty('max-width');panel.style.removeProperty('max-height');panel.style.removeProperty('padding');panel.style.removeProperty('transform');return;}
+    var mobile=window.matchMedia&&window.matchMedia('(max-width:700px)').matches;
+    var narrow=window.matchMedia&&window.matchMedia('(max-width:430px)').matches;
+    panel.style.setProperty('left',narrow?'5px':'7px','important');
+    panel.style.setProperty('right','auto','important');
+    panel.style.setProperty('top',mobile?'56px':'58px','important');
+    panel.style.setProperty('bottom',mobile?'50px':'54px','important');
+    panel.style.setProperty('width',narrow?'150px':(mobile?'165px':'205px'),'important');
+    panel.style.setProperty('max-width',narrow?'150px':(mobile?'165px':'205px'),'important');
+    panel.style.setProperty('max-height',mobile?'calc(100% - 106px)':'calc(100% - 112px)','important');
+    panel.style.setProperty('padding',mobile?'5px':'7px','important');
+    panel.style.setProperty('transform','none','important');
+    panel.style.setProperty('z-index','60','important');
+    var rows=panel.querySelectorAll('.part-row');for(var i=0;i<rows.length;i++){rows[i].style.setProperty('grid-template-columns',mobile?'17px minmax(0,1fr) auto':'19px minmax(0,1fr) auto','important');rows[i].style.setProperty('min-height',mobile?'31px':'35px','important');rows[i].style.setProperty('gap','3px','important');rows[i].style.setProperty('padding','2px','important');}
+  }
+  function updateGarageUI(){var panel=document.getElementById('garage-camera-controls'),categoryUI=document.getElementById('garage-category-ui'),active=inGarage();if(panel)panel.style.display=active?'block':'none';if(categoryUI)categoryUI.style.display=active?'flex':'none';enforceGaragePanel();}
   function consume(event){event.preventDefault();event.stopImmediatePropagation();}
   function installPointerCamera(renderer){var canvas=renderer.domElement;if(!canvas||orbit.canvas===canvas)return;orbit.canvas=canvas;canvas.addEventListener('pointerdown',function(event){if(!inGarage())return;orbit.dragging=true;orbit.lastX=event.clientX;orbit.lastY=event.clientY;try{canvas.setPointerCapture(event.pointerId);}catch(e){}consume(event);},true);canvas.addEventListener('pointermove',function(event){if(!inGarage()||!orbit.dragging)return;var dx=event.clientX-orbit.lastX,dy=event.clientY-orbit.lastY;orbit.lastX=event.clientX;orbit.lastY=event.clientY;orbit.yaw-=dx*.008;orbit.pitch=Math.max(.34,Math.min(2.68,orbit.pitch+dy*.006));consume(event);},true);function endDrag(event){orbit.dragging=false;if(inGarage())consume(event);}canvas.addEventListener('pointerup',endDrag,true);canvas.addEventListener('pointercancel',endDrag,true);}
   injectGarageUI();
   THREE.WebGLRenderer.prototype.render=function(scene,camera){updateGarageUI();if(inGarage()){installPointerCamera(this);var car=findGarageCar(scene);if(car){var target=new THREE.Vector3(car.position.x,car.position.y+.82,car.position.z),horizontal=Math.sin(orbit.pitch)*orbit.radius;camera.position.set(target.x+Math.sin(orbit.yaw)*horizontal,target.y+Math.cos(orbit.pitch)*orbit.radius,target.z+Math.cos(orbit.yaw)*horizontal);camera.lookAt(target);}}else orbit.dragging=false;originalRender.call(this,scene,camera);};
-  var extra=document.createElement('script');extra.src='garage-upgrades.js?v=garage-upgrades-20261006-1';extra.onload=function(){console.log('Motornaya garage upgrades loaded');};extra.onerror=function(e){console.error('Garage upgrades failed to load',e);};document.head.appendChild(extra);
+  var extra=document.createElement('script');extra.src='garage-upgrades.js?v=garage-upgrades-20261006-2';extra.onload=function(){console.log('Motornaya garage upgrades loaded');};extra.onerror=function(e){console.error('Garage upgrades failed to load',e);};document.head.appendChild(extra);
   THREE.WebGLRenderer.prototype.__motornayaGarageOrbitHooked=true;
 })();
