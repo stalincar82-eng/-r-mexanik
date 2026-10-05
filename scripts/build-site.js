@@ -5,7 +5,13 @@ const path = require('node:path');
 
 const output = path.resolve(__dirname, '..', 'site');
 const root = path.resolve(__dirname, '..');
-const files = ['index.html', 'game.js', 'styles.css', 'car-model.glb'];
+const files = [
+  'index.html',
+  'game.js',
+  'styles.css',
+  'car-animation.js',
+  'chevrolet_camaro_1967_animated.glb'
+];
 
 function copyFile(relativePath) {
   const source = path.join(root, relativePath);
