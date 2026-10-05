@@ -446,18 +446,16 @@
         center: wheel.center,
         wheelSpinAxisVector: new THREE.Vector3(1, 0, 0)
       });
-      /* Build a real axle pivot: its LOCAL X axis is aligned to the wheel's
-         actual world axle. After that every wheel uses one deterministic
-         operation: spinPivot.rotation.x += spin. */
+      /* Fallback axle from the tire geometry. For BMW, attachWheelAccessories()
+         replaces this with the exact GLB brake-disc axle before attachment. */
       wheelPart.spinPivot.updateMatrixWorld(true);
       var pivotWorldQuaternion = wheelPart.spinPivot.getWorldQuaternion(new THREE.Quaternion());
       var localAxle = wheelAxisWorld.clone()
         .applyQuaternion(pivotWorldQuaternion.invert())
         .normalize();
-      var axleQuaternion = new THREE.Quaternion().setFromUnitVectors(
+      wheelPart.spinPivot.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(
         new THREE.Vector3(1, 0, 0), localAxle
-      );
-      wheelPart.spinPivot.quaternion.premultiply(axleQuaternion).normalize();
+      )).normalize();
       wheelPart.spinPivot.updateMatrixWorld(true);
       wheelPart.wheelSpinAxisVector.set(1, 0, 0);
       var wheelSize = wheel.bounds.getSize(new THREE.Vector3());
@@ -507,11 +505,21 @@
       }
 
       if (best && best.spinPivot) {
-        /* Attach the whole GLB disk node to the SAME axle pivot as the tire.
-           attach() preserves the disk's world transform, so the rim cannot
-           drift when the car moves or when the front wheel steers. */
+        /* The BMW disk is the authoritative axle reference. Align the wheel
+           pivot's LOCAL X to the disk's real world axle BEFORE attaching it. */
+        var diskWorldAxis = getWheelSpinAxis(bounds);
+        best.spinPivot.updateMatrixWorld(true);
+        var pivotQuaternion = best.spinPivot.getWorldQuaternion(new THREE.Quaternion());
+        var diskLocalAxle = diskWorldAxis.clone()
+          .applyQuaternion(pivotQuaternion.invert())
+          .normalize();
+        best.spinPivot.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(
+          new THREE.Vector3(1, 0, 0), diskLocalAxle
+        )).normalize();
         best.spinPivot.updateMatrixWorld(true);
         disk.updateMatrixWorld(true);
+        /* attach() keeps the GLB disk's world transform while moving it under
+           the same axle pivot as the tire. */
         best.spinPivot.attach(disk);
         wheelDisks.push({ node: disk, wheel: best });
       }
@@ -1022,9 +1030,13 @@
       var wheelPart = wheels[wheelIndex];
       if (!wheelPart.visible) continue;
       var spin = travel / Math.max(0.01, wheelPart.wheelRadius || 0.34);
-      /* The axle pivot was aligned to local X during registration.
-         Rotate the pivot itself so tire + exact BMW disk move together. */
-      if (wheelPart.spinPivot) wheelPart.spinPivot.rotation.x += spin;
+      /* The axle pivot may already have a non-zero alignment quaternion.
+         Multiply a LOCAL-X delta quaternion so that alignment is preserved.
+         Setting rotation.x would overwrite that alignment. */
+      if (wheelPart.spinPivot) {
+        var spinQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), spin);
+        wheelPart.spinPivot.quaternion.multiply(spinQuaternion).normalize();
+      }
     }
     /* Rims/discs are attached to the same spin pivots as the tires.
        No second rotation is applied: one axle, one rotation. */
