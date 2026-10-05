@@ -468,7 +468,7 @@
     var diskNodes = [];
     model.traverse(function (node) {
       if (!node || !node.name) return;
-      if (/^m:SM_Disk_[LR]_0000_001_SM_Disk_[LR]_0000_001_MAT_Details_Disk(?:_009)?_/i.test(node.name)) {
+      if (/^(?:m:)?SM_Disk_[LR]_0000_001_SM_Disk_[LR]_0000_001_MAT_Details_Disk(?:_009)?_/i.test(node.name)) {
         diskNodes.push(node);
       }
     });
