@@ -1022,8 +1022,8 @@
       var spinTarget = wheelPart.spinPivot || wheelPart.pivot;
       spinTarget.rotateOnAxis(spinAxis, spin);
     }
-    /* Rims/discs are children of the wheel spin pivot, so they now
-       rotate together with the tire around the same real axle. */
+    /* Rims/discs are attached to the same spin pivots as the tires.
+       No second rotation is applied: one axle, one rotation. */
     document.getElementById('speed-value').textContent = ('0' + Math.round(Math.abs(speed))).slice(-2);
     document.getElementById('gear-value').textContent = selectedGear;
     document.getElementById('top-status-text').textContent = engineRunning ? 'ДВИГАТЕЛЬ ВКЛЮЧЁН' : 'ДВИГАТЕЛЬ ВЫКЛЮЧЕН';
