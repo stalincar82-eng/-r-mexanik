@@ -1,0 +1,39 @@
+name: Reliable garage upgrade
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Patch game
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('game.js')
+          s = p.read_text()
+          if '  buildGarageEquipment();' not in s:
+              s = s.replace('  buildGarageLocation();\n', '  buildGarageLocation();\n  buildGarageEquipment();\n', 1)
+          if 'function buildGarageEquipment()' not in s:
+              fn = '''\n  function buildGarageEquipment() {\n    var gx = 30, gz = 0;\n    var steel = material(0x59615d, 0.72, 0.38);\n    var dark = material(0x242a28, 0.8, 0.25);\n    var yellow = material(0xd9f36a, 0.48, 0.05);\n    var red = material(0xb64a3f, 0.62, 0.18);\n    var wood = material(0x6b5540, 0.78, 0.05);\n    var posts = [[-3.7,-2.9],[-3.7,2.9],[3.7,-2.9],[3.7,2.9]];\n    for (var i = 0; i < posts.length; i++) {\n      box(scene, 0.22, 3.9, 0.22, 0x59615d, gx + posts[i][0], 1.95, gz + posts[i][1], steel);\n      box(scene, 0.62, 0.12, 0.38, 0xd9f36a, gx + posts[i][0], 3.82, gz + posts[i][1], yellow);\n    }\n    box(scene, 7.6, 0.12, 0.42, 0x59615d, gx, 0.18, gz - 2.55, steel);\n    box(scene, 7.6, 0.12, 0.42, 0x59615d, gx, 0.18, gz + 2.55, steel);\n    box(scene, 4.6, 0.16, 0.72, 0x6b5540, gx - 5.7, 1.35, gz + 5.55, wood);\n    box(scene, 1.55, 2.8, 0.7, 0x424946, gx + 6.4, 1.4, gz + 5.65, dark);\n    box(scene, 1.1, 0.14, 0.62, 0xb64a3f, gx - 6.3, 0.28, gz - 5.45, red);\n    box(scene, 0.18, 0.03, 5.8, 0xd9f36a, gx - 2.0, 0.11, gz, yellow);\n    box(scene, 0.18, 0.03, 5.8, 0xd9f36a, gx + 2.0, 0.11, gz, yellow);\n    for (i = 0; i < 4; i++) {\n      var tire = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.16, 10, 20), dark);\n      tire.rotation.y = Math.PI / 2;\n      tire.position.set(gx - 7.5 + i * 0.78, 0.72, gz + 3.95);\n      tire.castShadow = true;\n      scene.add(tire);\n    }\n  }\n'''
+              s = s.replace('  function buildCar() {\n', fn + '\n  function buildCar() {\n', 1)
+          state = '''\n  function garageStateKey() { return 'motornaya-garage-state-' + selectedCar; }\n  function saveGarageState() {\n    try {\n      var state = {};\n      Object.keys(parts).forEach(function(id) { var part = parts[id]; if (part) state[id] = {visible: part.visible !== false, isOpen: !!part.isOpen}; });\n      localStorage.setItem(garageStateKey(), JSON.stringify(state));\n    } catch (e) {}\n  }\n  function restoreGarageState() {\n    try {\n      var raw = localStorage.getItem(garageStateKey());\n      if (!raw) return;\n      var state = JSON.parse(raw);\n      Object.keys(state).forEach(function(id) {\n        var saved = state[id], part = parts[id];\n        if (!part) return;\n        part.visible = saved.visible !== false;\n        if (part.object) part.object.visible = part.visible;\n        part.isOpen = !!saved.isOpen && part.visible;\n        part.targetAngle = part.isOpen ? part.angle : 0;\n        if (part.recess) part.recess.visible = part.isOpen;\n      });\n    } catch (e) {}\n  }\n'''
+          if 'function garageStateKey()' not in s:
+              s = s.replace('  function discoverCarParts(model) {\n', state + '\n  function discoverCarParts(model) {\n', 1)
+          if '      restoreGarageState();' not in s:
+              s = s.replace('      discoverCarParts(model);\n      updatePartsPanel();', '      discoverCarParts(model);\n      restoreGarageState();\n      updatePartsPanel();', 1)
+          s = s.replace("    updatePartsPanel();\n    showToast(object.label + (object.visible ? ' установлена' : ' снята'));", "    updatePartsPanel();\n    saveGarageState();\n    showToast(object.label + (object.visible ? ' установлена' : ' снята'));", 1)
+          s = s.replace("    updatePartsPanel();\n    showToast(object.label + (object.isOpen ? ' открыта' : ' закрыта'));", "    updatePartsPanel();\n    saveGarageState();\n    showToast(object.label + (object.isOpen ? ' открыта' : ' закрыта'));", 1)
+          p.write_text(s)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add game.js
+          git diff --cached --quiet || (git commit -m 'Upgrade garage and persist car state' && git push)
