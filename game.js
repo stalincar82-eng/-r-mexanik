@@ -398,6 +398,7 @@
           !/steering|wheelhouse|brake|hub/i.test(wheelGroup.name)) wheelGroups.push(wheelGroup);
     }
     var uniqueWheelGroups = [];
+    var uniqueWheelGroups = [];
     for (var groupIndex = 0; groupIndex < wheelGroups.length; groupIndex++) {
       var nested = false;
       for (var parentIndex = 0; parentIndex < wheelGroups.length; parentIndex++) {
@@ -445,13 +446,20 @@
         center: wheel.center,
         wheelSpinAxisVector: new THREE.Vector3(1, 0, 0)
       });
-      /* The GLB is rotated inside the car group. Convert the real axle from
-         world space into the wheel spin pivot's parent space, not car space. */
+      /* Build a real axle pivot: its LOCAL X axis is aligned to the wheel's
+         actual world axle. After that every wheel uses one deterministic
+         operation: spinPivot.rotation.x += spin. */
       wheelPart.spinPivot.updateMatrixWorld(true);
-      var wheelParentQuaternion = wheelPart.spinPivot.parent.getWorldQuaternion(new THREE.Quaternion());
-      wheelPart.wheelSpinAxisVector = wheelAxisWorld.clone()
-        .applyQuaternion(wheelParentQuaternion.invert())
+      var pivotWorldQuaternion = wheelPart.spinPivot.getWorldQuaternion(new THREE.Quaternion());
+      var localAxle = wheelAxisWorld.clone()
+        .applyQuaternion(pivotWorldQuaternion.invert())
         .normalize();
+      var axleQuaternion = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(1, 0, 0), localAxle
+      );
+      wheelPart.spinPivot.quaternion.premultiply(axleQuaternion).normalize();
+      wheelPart.spinPivot.updateMatrixWorld(true);
+      wheelPart.wheelSpinAxisVector.set(1, 0, 0);
       var wheelSize = wheel.bounds.getSize(new THREE.Vector3());
       wheelPart.wheelRadius = Math.max(wheelSize.x, wheelSize.y, wheelSize.z) * 0.5;
       wheelPart.pivot.rotation.order = 'YXZ';
@@ -499,16 +507,13 @@
       }
 
       if (best && best.spinPivot) {
-        best.spinPivot.attach(disk);
-        /* Keep a direct reference to the visible disk and calculate its local
-           axle after reparenting. This avoids relying on the imported node's
-           original axis and is the same pivot hierarchy recommended by Three.js. */
+        /* Attach the whole GLB disk node to the SAME axle pivot as the tire.
+           attach() preserves the disk's world transform, so the rim cannot
+           drift when the car moves or when the front wheel steers. */
         best.spinPivot.updateMatrixWorld(true);
         disk.updateMatrixWorld(true);
-        var diskWorldAxis = getWheelSpinAxis(bounds);
-        var diskWorldQuaternion = disk.getWorldQuaternion(new THREE.Quaternion());
-        var diskLocalAxis = diskWorldAxis.clone().applyQuaternion(diskWorldQuaternion.clone().invert()).normalize();
-        wheelDisks.push({ node: disk, axis: diskLocalAxis, wheel: best });
+        best.spinPivot.attach(disk);
+        wheelDisks.push({ node: disk, wheel: best });
       }
     }
   }
@@ -797,7 +802,6 @@
   }
 
   function setMode(eventOrMode) {
-    var mode = typeof eventOrMode === 'string' ? eventOrMode : (eventOrMode && eventOrMode.currentTarget ? eventOrMode.currentTarget.getAttribute('data-mode') : (driving ? 'workshop' : 'drive'));
     driving = mode === 'drive';
     var buttons = document.querySelectorAll('.mode-button');
     var i;
@@ -1017,10 +1021,10 @@
     for (wheelIndex = 0; wheelIndex < wheels.length; wheelIndex++) {
       var wheelPart = wheels[wheelIndex];
       if (!wheelPart.visible) continue;
-      var spin = travel / 0.34;
-      var spinAxis = wheelPart.wheelSpinAxisVector || new THREE.Vector3(1, 0, 0);
-      var spinTarget = wheelPart.spinPivot || wheelPart.pivot;
-      spinTarget.rotateOnAxis(spinAxis, spin);
+      var spin = travel / Math.max(0.01, wheelPart.wheelRadius || 0.34);
+      /* The axle pivot was aligned to local X during registration.
+         Rotate the pivot itself so tire + exact BMW disk move together. */
+      if (wheelPart.spinPivot) wheelPart.spinPivot.rotation.x += spin;
     }
     /* Rims/discs are attached to the same spin pivots as the tires.
        No second rotation is applied: one axle, one rotation. */
