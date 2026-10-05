@@ -511,7 +511,9 @@
         best.spinPivot.updateMatrixWorld(true);
         disk.updateMatrixWorld(true);
         best.spinPivot.attach(disk);
-        disk.quaternion.identity();
+        /* Keep the imported disk orientation and local offset preserved by attach().
+           Resetting the quaternion here detached the visual rim orientation from
+           the wheel axle, so the tire could spin while the disk appeared frozen. */
         disk.updateMatrixWorld(true);
         wheelDisks.push({ node: disk, wheel: best });
       }
