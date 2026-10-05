@@ -49,6 +49,7 @@
     requestAnimationFrame(frame);
   }
 
+  hookLoader();
   var tries = 0;
   var timer = setInterval(function () {
     tries++;
