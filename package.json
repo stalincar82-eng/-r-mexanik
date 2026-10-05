@@ -12,13 +12,8 @@
     "build:site": "node scripts/build-site.js",
     "check": "node --check game.js && node --check electron-main.js && node --check scripts/build-site.js"
   },
-  "dependencies": {
-    "three": "0.128.0"
-  },
-  "devDependencies": {
-    "electron": "44.5.1",
-    "electron-builder": "26.15.3"
-  },
+  "dependencies": { "three": "0.128.0" },
+  "devDependencies": { "electron": "44.5.1", "electron-builder": "26.15.3" },
   "build": {
     "appId": "com.motornaya.game",
     "productName": "Моторная",
@@ -28,16 +23,14 @@
       "game.js",
       "styles.css",
       "car-animation.js",
-      "chevrolet_camaro_1967_animated.glb",
+      "1967_chevrolet_camaro_ss_350_coupe.glb",
       "assets/**",
       "vendor/**",
       "electron-main.js",
       "package.json"
     ],
     "artifactName": "Motornaya-Setup.${ext}",
-    "win": {
-      "target": "nsis"
-    },
+    "win": { "target": "nsis" },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
