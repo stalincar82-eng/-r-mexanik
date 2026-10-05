@@ -5,27 +5,32 @@
   var last = performance.now();
   var CAMARO_URL = '1967_chevrolet_camaro_ss_350_coupe.glb';
   var CAMARO_LABEL = 'CHEVROLET CAMARO · 1967 SS 350';
-  var camaroModelRoot = null;
   var camaroRims = [];
+
+  function isRimNode(node) {
+    return !!(node && node.name && /Rim_Main/i.test(node.name));
+  }
 
   function normalizeCamaroWheelNodes(scene) {
     if (!scene || scene.__motornayaCamaroWheelsNormalized) return;
-    var wheelIndex = 0;
     camaroRims = [];
+
+    /* Do not rename the tyre meshes. game.js must see their original tire/tyre
+       names so it can split the four real wheels correctly. For the rims,
+       keep only the top-level Rim_Main group/mesh for each physical wheel;
+       nested Rim_Main children are parts of the same rim and must not become
+       separate wheels. */
     scene.traverse(function (node) {
-      if (!node || !node.name) return;
-
-      /* Mark only the real tyre meshes. Do NOT rename the Camaro rim nodes:
-         game.js has a legacy BMW disk detector, and leaving the rim names
-         untouched lets this bridge exclusively control their attachment. */
-      if (/tire|tyre/i.test(node.name) && node.isMesh) {
-        node.name = 'CAMARO_WHEEL_GROUP_' + wheelIndex++;
-        return;
+      if (!isRimNode(node)) return;
+      var ancestor = node.parent;
+      while (ancestor && ancestor !== scene) {
+        if (isRimNode(ancestor)) return;
+        ancestor = ancestor.parent;
       }
-
-      if (/Rim_Main/i.test(node.name)) camaroRims.push(node);
+      camaroRims.push(node);
     });
-    camaroModelRoot = scene;
+
+    scene.__motornayaCamaroRims = camaroRims;
     scene.__motornayaCamaroWheelsNormalized = true;
   }
 
@@ -35,7 +40,7 @@
   }
 
   function bindRimToSteeringPivot(pivot, tire) {
-    if (!camaroModelRoot || !pivot || !tire || !camaroRims.length) return;
+    if (!pivot || !tire || !camaroRims.length || pivot.__motornayaCamaroRimBound) return;
 
     var tireBounds = new THREE.Box3().setFromObject(tire);
     if (tireBounds.isEmpty()) return;
@@ -55,14 +60,14 @@
       }
     }
 
-    /* The Camaro wheel is compact, so a rim farther than this is not the
-       matching wheel. This also prevents accidentally grabbing body chrome. */
-    if (!best || bestDistance > 0.9) return;
+    /* Never steal a distant body/chrome object. */
+    if (!best || bestDistance > 1.15) return;
 
     pivot.updateMatrixWorld(true);
     best.updateMatrixWorld(true);
     pivot.attach(best);
     best.__motornayaRimBound = true;
+    pivot.__motornayaCamaroRimBound = true;
   }
 
   function hookWheelPivotAttachment() {
@@ -70,10 +75,10 @@
     var originalAttach = THREE.Object3D.prototype.attach;
     THREE.Object3D.prototype.attach = function (object) {
       originalAttach.call(this, object);
-      if (object && object.name && /^CAMARO_WHEEL_GROUP_/i.test(object.name)) {
-        /* At this exact moment `this` is the spinPivot created by game.js.
-           Attach the matching physical rim to the same pivot, so steering and
-           wheel spin can never separate the tire from its disk. */
+      if (object && object.name && /tire|tyre/i.test(object.name)) {
+        /* game.js calls attach() on the spinPivot immediately after creating
+           each wheel. Bind exactly one physical Camaro rim to that same pivot.
+           No position reset is performed: attach() preserves world position. */
         bindRimToSteeringPivot(this, object);
       }
     };
@@ -98,7 +103,6 @@
       if (/^(?:\.\/)?(?:car-model|chevrolet_camaro_1967_animated)\.glb(?:\?.*)?$/i.test(actualUrl)) actualUrl = CAMARO_URL;
       return originalLoad.call(this, actualUrl, function (gltf) {
         normalizeCamaroWheelNodes(gltf && gltf.scene);
-        camaroModelRoot = gltf && gltf.scene;
         startMixer(gltf);
         if (onLoad) onLoad(gltf);
       }, onProgress, onError);
