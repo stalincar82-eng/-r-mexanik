@@ -833,6 +833,7 @@
 
   function setMode(eventOrMode) {
     var mode = typeof eventOrMode === 'string' ? eventOrMode : (eventOrMode && eventOrMode.currentTarget ? eventOrMode.currentTarget.getAttribute('data-mode') : 'drive');
+    var mode = typeof eventOrMode === 'string' ? eventOrMode : (eventOrMode && eventOrMode.currentTarget ? eventOrMode.currentTarget.getAttribute('data-mode') : 'drive');
     driving = mode === 'drive';
     var buttons = document.querySelectorAll('.mode-button');
     var i;
