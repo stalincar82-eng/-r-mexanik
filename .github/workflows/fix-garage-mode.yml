@@ -13,11 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Add visual garage location
+      - name: Patch garage transition
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           p = Path('game.js')
           s = p.read_text()
 
@@ -29,81 +28,23 @@ jobs:
 
           if 'function buildGarageLocation()' not in s:
               marker = '  function bindInterface() {\n'
-              garage = r'''  function buildGarageLocation() {
-    var gx = 30;
-    var gz = 0;
-    var floorMat = material(0x4b504e, 0.88);
-    var wallMat = material(0x606762, 0.92);
-    var trimMat = material(0x3d4541, 0.72, 0.18);
-    var whiteMat = material(0xd7d9cf, 0.7);
-    var yellowMat = material(0xd9f36a, 0.48, 0.05);
-    box(scene, 18, 0.12, 15, 0x3e4441, gx, -0.02, gz, floorMat);
-    box(scene, 18, 0.16, 0.35, 0xd9f36a, gx, 0.08, gz - 7.1, yellowMat);
-    box(scene, 18, 0.16, 0.35, 0xd9f36a, gx, 0.08, gz + 7.1, yellowMat);
-    box(scene, 0.35, 5.2, 15, 0x555d58, gx - 8.8, 2.6, gz, wallMat);
-    box(scene, 0.35, 5.2, 15, 0x555d58, gx + 8.8, 2.6, gz, wallMat);
-    box(scene, 18, 5.2, 0.35, 0x555d58, gx, 2.6, gz + 7.3, wallMat);
-    box(scene, 18, 0.35, 15, 0x3b413e, gx, 5.25, gz, trimMat);
-    box(scene, 7.4, 3.6, 0.12, 0x9da49e, gx, 1.8, gz - 7.28, whiteMat);
-    box(scene, 7.0, 3.15, 0.12, 0x272d2b, gx, 1.55, gz - 7.2, trimMat);
-    box(scene, 5.8, 0.5, 0.16, 0xd9f36a, gx, 4.45, gz - 7.15, yellowMat);
-    var liftMat = material(0x454c49, 0.5, 0.55);
-    box(scene, 0.28, 1.15, 0.28, 0x747d77, gx - 2.9, 0.58, gz - 2.5, liftMat);
-    box(scene, 0.28, 1.15, 0.28, 0x747d77, gx + 2.9, 0.58, gz - 2.5, liftMat);
-    box(scene, 0.28, 1.15, 0.28, 0x747d77, gx - 2.9, 0.58, gz + 2.5, liftMat);
-    box(scene, 0.28, 1.15, 0.28, 0x747d77, gx + 2.9, 0.58, gz + 2.5, liftMat);
-    box(scene, 6.4, 0.12, 5.8, 0x68716c, gx, 0.05, gz, liftMat);
-    box(scene, 0.9, 1.4, 0.42, 0x424a46, gx - 6.6, 0.8, gz + 5.6, trimMat);
-    box(scene, 0.9, 1.4, 0.42, 0x424a46, gx - 5.4, 0.8, gz + 5.6, trimMat);
-    box(scene, 0.9, 1.4, 0.42, 0x424a46, gx - 4.2, 0.8, gz + 5.6, trimMat);
-    box(scene, 4.1, 0.18, 0.5, 0xd9f36a, gx - 5.4, 1.65, gz + 5.6, yellowMat);
-    for (var lightX = -6; lightX <= 6; lightX += 3) {
-      var lamp = box(scene, 1.2, 0.08, 0.35, 0xf4edc7, gx + lightX, 5.0, gz - 1.5, new THREE.MeshStandardMaterial({ color: 0xf4edc7, emissive: 0xaaa36f, emissiveIntensity: 0.8, roughness: 0.35 }));
-      lamp.castShadow = false;
-      var point = new THREE.PointLight(0xfff1c4, 0.75, 8);
-      point.position.set(gx + lightX, 4.8, gz - 1.5);
-      scene.add(point);
-    }
-    box(scene, 5.8, 0.72, 0.18, 0xd9f36a, gx, 4.45, gz + 7.12, yellowMat);
-  }
-
-'''
+              garage = '''  function buildGarageLocation() {\n    var gx = 30;\n    var gz = 0;\n    var floorMat = material(0x4b504e, 0.88);\n    var wallMat = material(0x606762, 0.92);\n    var trimMat = material(0x3d4541, 0.72, 0.18);\n    var yellowMat = material(0xd9f36a, 0.48, 0.05);\n    box(scene, 18, 0.12, 15, 0x3e4441, gx, -0.02, gz, floorMat);\n    box(scene, 18, 5.2, 0.35, 0x555d58, gx, 2.6, gz + 7.3, wallMat);\n    box(scene, 0.35, 5.2, 15, 0x555d58, gx - 8.8, 2.6, gz, wallMat);\n    box(scene, 0.35, 5.2, 15, 0x555d58, gx + 8.8, 2.6, gz, wallMat);\n    box(scene, 18, 0.35, 15, 0x3b413e, gx, 5.25, gz, trimMat);\n    box(scene, 7.4, 3.6, 0.12, 0x9da49e, gx, 1.8, gz - 7.28, material(0x9da49e));\n    box(scene, 7.0, 3.15, 0.12, 0x272d2b, gx, 1.55, gz - 7.2, trimMat);\n    box(scene, 5.8, 0.5, 0.16, 0xd9f36a, gx, 4.45, gz - 7.15, yellowMat);\n    box(scene, 6.4, 0.12, 5.8, 0x68716c, gx, 0.05, gz, material(0x68716c, 0.5, 0.55));\n    box(scene, 4.1, 0.18, 0.5, 0xd9f36a, gx - 5.4, 1.65, gz + 5.6, yellowMat);\n  }\n\n'''
               s = s.replace(marker, garage + marker, 1)
 
-          setmode_pattern = re.compile(r"  function setMode\(eventOrMode\) \{\n(?:    var mode = .*\n)+    driving = mode === 'drive';")
-          replacement = """  function setMode(eventOrMode) {
-    var mode = typeof eventOrMode === 'string' ? eventOrMode : (eventOrMode && eventOrMode.currentTarget ? eventOrMode.currentTarget.getAttribute('data-mode') : 'drive');
-    driving = mode === 'drive';
-    if (!driving && !garageMode) {
-      savedDrivePosition = car.position.clone();
-      savedDriveHeading = heading;
-      car.position.set(30, 0, 0);
-      car.rotation.y = 0;
-      heading = 0;
-      cameraOrbit = 0;
-      cameraElevation = 0.08;
-      garageMode = true;
-      showToast('Гараж: автомобиль перемещён в мастерскую');
-    } else if (driving && garageMode) {
-      if (savedDrivePosition) car.position.copy(savedDrivePosition);
-      heading = savedDriveHeading;
-      car.rotation.y = heading;
-      cameraOrbit = 0;
-      cameraElevation = 0;
-      garageMode = false;
-      showToast('Выезд из гаража');
-    }"""
-          if setmode_pattern.search(s):
-              s = setmode_pattern.sub(replacement, s, count=1)
-          else:
-              raise SystemExit('setMode block not found')
+          start = s.find('  function setMode(eventOrMode) {')
+          if start < 0:
+              raise SystemExit('setMode start not found')
+          end = s.find('\n  function selectGear(', start)
+          if end < 0:
+              raise SystemExit('setMode end not found')
 
+          replacement = '''  function setMode(eventOrMode) {\n    var mode = typeof eventOrMode === 'string' ? eventOrMode : (eventOrMode && eventOrMode.currentTarget ? eventOrMode.currentTarget.getAttribute('data-mode') : 'drive');\n    driving = mode === 'drive';\n    if (!driving && !garageMode) {\n      savedDrivePosition = car.position.clone();\n      savedDriveHeading = heading;\n      car.position.set(30, 0, 0);\n      car.rotation.y = 0;\n      heading = 0;\n      cameraOrbit = 0;\n      cameraElevation = 0.08;\n      garageMode = true;\n      showToast('Гараж: автомобиль перемещён в мастерскую');\n    } else if (driving && garageMode) {\n      if (savedDrivePosition) car.position.copy(savedDrivePosition);\n      heading = savedDriveHeading;\n      car.rotation.y = heading;\n      cameraOrbit = 0;\n      cameraElevation = 0;\n      garageMode = false;\n      showToast('Выезд из гаража');\n    }\n    var buttons = document.querySelectorAll('.mode-button');\n    var i;\n    for (i = 0; i < buttons.length; i++) buttons[i].classList.toggle('is-active', buttons[i].getAttribute('data-mode') === mode);\n    document.getElementById('workshop-panel').classList.toggle('is-collapsed', driving);\n    document.getElementById('drive-controls').classList.toggle('is-hidden', !driving);\n    document.getElementById('top-status-text').textContent = driving ? 'СВОБОДНЫЙ ЗАЕЗД' : 'РАБОТА В ГАРАЖЕ';\n    if (!driving) speed = 0;\n  }\n'''
+          s = s[:start] + replacement + s[end:]
           p.write_text(s)
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add game.js
           git diff --cached --quiet && exit 0
-          git commit -m "Add visual garage location and garage teleport"
-          git pull --rebase origin main
+          git commit -m "Fix garage location transition"
           git push
