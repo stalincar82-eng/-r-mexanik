@@ -1,0 +1,188 @@
+name: Complete garage upgrade
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  upgrade:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upgrade garage features
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('game.js')
+          s = p.read_text()
+          marker = '  bindInterface();\n'
+          if 'function garageEnhancementInit()' not in s:
+              if marker not in s:
+                  raise SystemExit('startup marker not found')
+              s = s.replace(marker, '  garageEnhancementInit();\n' + marker, 1)
+
+              anchor = '  function animate() {\n'
+              if anchor not in s:
+                  raise SystemExit('animate anchor not found')
+
+              block = r'''  function garageEnhancementInit() {
+    var storageKey = 'motornaya-garage-' + selectedCar;
+    var restoring = false;
+
+    function saveGarageState() {
+      if (restoring) return;
+      try {
+        var state = {};
+        for (var id in parts) {
+          if (!parts[id]) continue;
+          state[id] = {
+            visible: parts[id].visible !== false,
+            isOpen: !!parts[id].isOpen
+          };
+        }
+        localStorage.setItem(storageKey, JSON.stringify(state));
+      } catch (error) {}
+    }
+
+    function restoreGarageState() {
+      try {
+        var raw = localStorage.getItem(storageKey);
+        if (!raw) return;
+        var state = JSON.parse(raw);
+        restoring = true;
+        for (var id in state) {
+          if (!parts[id]) continue;
+          var item = state[id];
+          if (item.visible === false) {
+            parts[id].visible = false;
+            if (parts[id].pivot) parts[id].pivot.visible = false;
+          } else {
+            parts[id].visible = true;
+            if (parts[id].pivot) parts[id].pivot.visible = true;
+          }
+          if (parts[id].openable && parts[id].visible) {
+            setPartOpen(parts[id], !!item.isOpen);
+            if (parts[id].recess) parts[id].recess.visible = !!item.isOpen;
+          }
+        }
+        restoring = false;
+      } catch (error) {
+        restoring = false;
+      }
+    }
+
+    var originalTogglePart = togglePart;
+    togglePart = function (event) {
+      originalTogglePart(event);
+      saveGarageState();
+    };
+
+    var originalTogglePartOpen = togglePartOpen;
+    togglePartOpen = function (event) {
+      originalTogglePartOpen(event);
+      saveGarageState();
+    };
+
+    var originalUpdatePartsPanel = updatePartsPanel;
+    updatePartsPanel = function () {
+      originalUpdatePartsPanel();
+      if (!restoring) restoreGarageState();
+    };
+
+    /* A proper workshop: lift, tool cabinet, workbench, lamps and a tire rack.
+       Everything is visual only and stays outside the driving area. */
+    var workshopRoot = new THREE.Group();
+    workshopRoot.name = 'MotornayaGarageEquipment';
+    workshopRoot.position.set(30, 0, 0);
+    scene.add(workshopRoot);
+
+    var metal = material(0x555d59, 0.55, 0.5);
+    var dark = material(0x252b29, 0.72, 0.2);
+    var yellow = material(0xd9f36a, 0.48, 0.05);
+    var red = material(0x8b3027, 0.5, 0.15);
+
+    function gbox(w, h, d, x, y, z, mat) {
+      return box(workshopRoot, w, h, d, 0x555d59, x, y, z, mat);
+    }
+
+    /* four-post lift */
+    for (var lx = -2.35; lx <= 2.35; lx += 4.7) {
+      for (var lz = -1.55; lz <= 1.55; lz += 3.1) {
+        gbox(0.18, 2.0, 0.18, lx, 1.0, lz, metal);
+      }
+    }
+    gbox(5.5, 0.16, 0.45, 0, 2.02, -1.55, yellow);
+    gbox(5.5, 0.16, 0.45, 0, 2.02, 1.55, yellow);
+    gbox(5.8, 0.08, 4.2, 0, 0.04, 0, dark);
+
+    /* workbench and tool cabinet */
+    gbox(3.2, 0.15, 0.72, -5.4, 1.25, 4.9, metal);
+    gbox(3.2, 1.15, 0.62, -5.4, 0.62, 4.9, dark);
+    for (var drawer = 0; drawer < 4; drawer++) {
+      gbox(2.5, 0.13, 0.48, -5.4, 0.28 + drawer * 0.27, 4.56, metal);
+    }
+    gbox(2.6, 2.8, 0.38, 5.6, 1.4, 4.85, dark);
+    for (var shelf = 0; shelf < 4; shelf++) {
+      gbox(2.25, 0.08, 0.48, 5.6, 0.35 + shelf * 0.65, 4.62, metal);
+    }
+
+    /* tire rack */
+    gbox(0.12, 2.7, 2.2, 7.0, 1.35, -4.8, metal);
+    gbox(0.12, 2.7, 2.2, 8.3, 1.35, -4.8, metal);
+    for (var rack = 0; rack < 3; rack++) {
+      var tire = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.17, 12, 24), dark);
+      tire.rotation.y = Math.PI / 2;
+      tire.position.set(7.65, 0.55 + rack * 0.72, -4.8);
+      tire.castShadow = true;
+      workshopRoot.add(tire);
+    }
+
+    /* hanging work lights */
+    for (var lamp = -1; lamp <= 1; lamp++) {
+      gbox(0.08, 1.0, 0.08, lamp * 2.4, 4.65, 0, metal);
+      var light = new THREE.PointLight(0xffe7b0, 0.75, 7);
+      light.position.set(30 + lamp * 2.4, 4.35, 0);
+      scene.add(light);
+      gbox(1.2, 0.12, 0.32, lamp * 2.4, 4.15, 0, yellow);
+    }
+
+    /* simple red fire extinguisher and yellow safety markings */
+    gbox(0.22, 0.75, 0.22, -7.0, 0.48, 5.7, red);
+    gbox(0.16, 0.02, 4.8, -7.7, 0.07, 0, yellow);
+    gbox(0.16, 0.02, 4.8, 7.7, 0.07, 0, yellow);
+
+    /* Reset/repair station button in the UI: double-click the condition card
+       to reinstall all garage parts and close all panels. */
+    var condition = document.getElementById('condition-card') || document.getElementById('condition-value');
+    if (condition) {
+      condition.title = 'Двойной клик — собрать автомобиль';
+      condition.addEventListener('dblclick', function () {
+        for (var id in parts) {
+          if (!parts[id]) continue;
+          parts[id].visible = true;
+          if (parts[id].pivot) parts[id].pivot.visible = true;
+          if (parts[id].openable) setPartOpen(parts[id], false);
+          if (parts[id].recess) parts[id].recess.visible = false;
+        }
+        updatePartsPanel();
+        saveGarageState();
+        showToast('Автомобиль полностью собран');
+      });
+    }
+  }
+
+'''
+              s = s.replace(anchor, block + anchor, 1)
+              p.write_text(s)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add game.js
+          if ! git diff --cached --quiet; then
+            git commit -m 'Complete garage repair and workshop upgrade'
+            git push
+          fi
