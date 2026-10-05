@@ -1,0 +1,94 @@
+name: Garage transition fix
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch game.js
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('game.js')
+          s = p.read_text()
+          if 'var garageMode = false;' not in s:
+              s = s.replace('  var cameraPosition;\n', '  var cameraPosition;\n  var garageMode = false;\n  var savedDrivePosition = null;\n  var savedDriveHeading = 0;\n', 1)
+          if 'buildGarageLocation();' not in s:
+              s = s.replace('  buildWorkshop();\n', '  buildWorkshop();\n  buildGarageLocation();\n', 1)
+          if 'function buildGarageLocation()' not in s:
+              marker = '  function bindInterface() {'
+              garage = '''  function buildGarageLocation() {
+    var gx = 30, gz = 0;
+    var floor = material(0x4b504e, 0.88);
+    var wall = material(0x606762, 0.92);
+    var trim = material(0x3d4541, 0.72, 0.18);
+    var yellow = material(0xd9f36a, 0.48, 0.05);
+    box(scene, 18, 0.12, 15, 0x3e4441, gx, -0.02, gz, floor);
+    box(scene, 18, 5.2, 0.35, 0x555d58, gx, 2.6, gz + 7.3, wall);
+    box(scene, 0.35, 5.2, 15, 0x555d58, gx - 8.8, 2.6, gz, wall);
+    box(scene, 0.35, 5.2, 15, 0x555d58, gx + 8.8, 2.6, gz, wall);
+    box(scene, 18, 0.35, 15, 0x3b413e, gx, 5.25, gz, trim);
+    box(scene, 7.4, 3.6, 0.12, 0x9da49e, gx, 1.8, gz - 7.28, material(0x9da49e));
+    box(scene, 7.0, 3.15, 0.12, 0x272d2b, gx, 1.55, gz - 7.2, trim);
+    box(scene, 5.8, 0.5, 0.16, 0xd9f36a, gx, 4.45, gz - 7.15, yellow);
+    box(scene, 6.4, 0.12, 5.8, 0x68716c, gx, 0.05, gz, material(0x68716c, 0.5, 0.55));
+  }
+
+'''
+              if marker not in s:
+                  raise SystemExit('garage insertion marker not found')
+              s = s.replace(marker, garage + marker, 1)
+          start = s.find('  function setMode(eventOrMode) {')
+          end = s.find('\n  function selectGear(', start)
+          if start < 0 or end < 0:
+              raise SystemExit('setMode block not found')
+          replacement = '''  function setMode(eventOrMode) {
+    var mode = typeof eventOrMode === 'string' ? eventOrMode : (eventOrMode && eventOrMode.currentTarget ? eventOrMode.currentTarget.getAttribute('data-mode') : 'drive');
+    driving = mode === 'drive';
+    if (!driving && !garageMode) {
+      savedDrivePosition = car.position.clone();
+      savedDriveHeading = heading;
+      car.position.set(30, 0, 0);
+      car.rotation.y = 0;
+      heading = 0;
+      cameraOrbit = 0;
+      cameraElevation = 0.08;
+      garageMode = true;
+      showToast('Гараж: автомобиль перемещён в мастерскую');
+    } else if (driving && garageMode) {
+      if (savedDrivePosition) car.position.copy(savedDrivePosition);
+      heading = savedDriveHeading;
+      car.rotation.y = heading;
+      cameraOrbit = 0;
+      cameraElevation = 0;
+      garageMode = false;
+      showToast('Выезд из гаража');
+    }
+    var buttons = document.querySelectorAll('.mode-button');
+    var i;
+    for (i = 0; i < buttons.length; i++) buttons[i].classList.toggle('is-active', buttons[i].getAttribute('data-mode') === mode);
+    document.getElementById('workshop-panel').classList.toggle('is-collapsed', driving);
+    document.getElementById('drive-controls').classList.toggle('is-hidden', !driving);
+    document.getElementById('top-status-text').textContent = driving ? 'СВОБОДНЫЙ ЗАЕЗД' : 'РАБОТА В ГАРАЖЕ';
+    if (!driving) speed = 0;
+  }
+'''
+          s = s[:start] + replacement + s[end:]
+          p.write_text(s)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add game.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Fix garage transition and visual location'
+          git push
