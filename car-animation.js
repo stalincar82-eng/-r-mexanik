@@ -71,8 +71,6 @@
     for (var i = 0; i < camaroTires.length; i++) {
       var tire = camaroTires[i];
       if (!tire || !tire.parent) continue;
-      /* game.js fallback registers the complete physical wheel parent as a
-         group, then puts that group under steering pivot -> spinPivot. */
       var pivot = tire.parent.parent || tire.parent;
       if (pivot && result.indexOf(pivot) === -1) result.push(pivot);
     }
@@ -113,6 +111,42 @@
     return bound === 4;
   }
 
+  /* game.js currently uses the opposite Y steering sign for this Camaro.
+     The wheel/rim hierarchy is already correct, so invert ONLY the four
+     front steering pivot matrices. This leaves the car body orientation,
+     wheel spin and all four complete tires untouched. The pivots are
+     detected when their spinPivot receives a CamaroWheel_*_Group child. */
+  function hookCamaroSteeringDirection() {
+    if (!window.THREE || !THREE.Object3D || THREE.Object3D.prototype.__motornayaCamaroSteeringHooked) return false;
+
+    var originalAdd = THREE.Object3D.prototype.add;
+    var originalUpdateMatrix = THREE.Object3D.prototype.updateMatrix;
+
+    THREE.Object3D.prototype.add = function () {
+      originalAdd.apply(this, arguments);
+      for (var i = 0; i < arguments.length; i++) {
+        var object = arguments[i];
+        if (!object || !object.name || !/^CamaroWheel_\d+_Group$/i.test(object.name)) continue;
+        var steeringPivot = this.parent;
+        if (!steeringPivot || steeringPivot.__motornayaCamaroSteeringInverted) continue;
+        steeringPivot.__motornayaCamaroSteeringInverted = true;
+      }
+    };
+
+    THREE.Object3D.prototype.updateMatrix = function () {
+      if (this.__motornayaCamaroSteeringInverted) {
+        this.rotation.y = -this.rotation.y;
+        originalUpdateMatrix.call(this);
+        this.rotation.y = -this.rotation.y;
+        return;
+      }
+      originalUpdateMatrix.call(this);
+    };
+
+    THREE.Object3D.prototype.__motornayaCamaroSteeringHooked = true;
+    return true;
+  }
+
   function forceLabels() {
     var selector = document.getElementById('car-selector');
     if (selector) {
@@ -135,7 +169,6 @@
         collectCamaroParts(gltf && gltf.scene);
         protectWholeCamaroTires();
         if (onLoad) onLoad(gltf);
-        /* discoverCarParts() is synchronous, so names can be restored now. */
         restoreWholeCamaroTireNames();
         setTimeout(bindCamaroRims, 0);
         setTimeout(bindCamaroRims, 50);
@@ -148,10 +181,12 @@
     return true;
   }
 
+  hookCamaroSteeringDirection();
   hookLoader();
   var tries = 0;
   var timer = setInterval(function () {
     tries++;
+    hookCamaroSteeringDirection();
     if (hookLoader() || tries > 100) clearInterval(timer);
   }, 20);
 
