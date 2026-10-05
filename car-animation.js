@@ -1,4 +1,4 @@
-/* Моторная — Chevrolet Camaro 1967 wheel bridge. */
+/* Моторная — Chevrolet Camaro 1967 wheel bridge + garage panels. */
 (function () {
   'use strict';
 
@@ -111,6 +111,264 @@
     return bound === 4;
   }
 
+  function makeCompactGeometry(source, triangleIds) {
+    if (!source || !source.index || !source.attributes || !triangleIds.length) return null;
+
+    var sourceIndex = source.index;
+    var remap = {};
+    var used = [];
+    var compactIndices = [];
+
+    for (var i = 0; i < triangleIds.length; i++) {
+      var triangleIndex = triangleIds[i];
+      for (var corner = 0; corner < 3; corner++) {
+        var oldIndex = sourceIndex.getX(triangleIndex * 3 + corner);
+        if (remap[oldIndex] === undefined) {
+          remap[oldIndex] = used.length;
+          used.push(oldIndex);
+        }
+        compactIndices.push(remap[oldIndex]);
+      }
+    }
+
+    var geometry = new THREE.BufferGeometry();
+    for (var attributeName in source.attributes) {
+      var sourceAttribute = source.attributes[attributeName];
+      if (!sourceAttribute || !sourceAttribute.array || !sourceAttribute.itemSize) continue;
+      var itemSize = sourceAttribute.itemSize;
+      var array = new sourceAttribute.array.constructor(used.length * itemSize);
+      for (var vertexIndex = 0; vertexIndex < used.length; vertexIndex++) {
+        var oldVertex = used[vertexIndex];
+        for (var component = 0; component < itemSize; component++) {
+          array[vertexIndex * itemSize + component] =
+            sourceAttribute.array[oldVertex * itemSize + component];
+        }
+      }
+      geometry.setAttribute(
+        attributeName,
+        new THREE.BufferAttribute(array, itemSize, sourceAttribute.normalized)
+      );
+    }
+    geometry.setIndex(compactIndices);
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+    return geometry;
+  }
+
+  function componentInfo(source, triangleIds) {
+    var position = source.attributes.position;
+    var index = source.index;
+    var min = new THREE.Vector3(Infinity, Infinity, Infinity);
+    var max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+
+    for (var i = 0; i < triangleIds.length; i++) {
+      var triangle = triangleIds[i];
+      for (var corner = 0; corner < 3; corner++) {
+        var vertexIndex = index.getX(triangle * 3 + corner);
+        var vertex = new THREE.Vector3().fromBufferAttribute(position, vertexIndex);
+        min.min(vertex);
+        max.max(vertex);
+      }
+    }
+
+    return {
+      triangles: triangleIds,
+      count: triangleIds.length,
+      min: min,
+      max: max,
+      center: new THREE.Vector3().addVectors(min, max).multiplyScalar(0.5)
+    };
+  }
+
+  /* The Camaro body mesh is one large CarPaint mesh, so hood/doors/trunk are
+     not separate GLTF nodes. Its indexed geometry does contain four isolated
+     panel components: hood, trunk lid and the two doors. Split only those
+     exact connected components into real scene objects. This gives the garage
+     real removable/openable parts without touching the working wheel setup. */
+  function prepareCamaroGarage(scene) {
+    if (!scene || scene.__motornayaCamaroGaragePrepared) return false;
+
+    var bodyMesh = null;
+    scene.traverse(function (node) {
+      if (!bodyMesh && node.isMesh && /CarPaint_Max.*CarPaint_0/i.test(node.name || '')) bodyMesh = node;
+    });
+    if (!bodyMesh || !bodyMesh.geometry || !bodyMesh.geometry.index) return false;
+
+    var source = bodyMesh.geometry;
+    var position = source.attributes.position;
+    var sourceIndex = source.index;
+    if (!position || !sourceIndex) return false;
+
+    var triangleCount = Math.floor(sourceIndex.count / 3);
+    var vertexToTriangles = new Array(position.count);
+    for (var vertexIndex = 0; vertexIndex < position.count; vertexIndex++) vertexToTriangles[vertexIndex] = [];
+
+    for (var triangleIndex = 0; triangleIndex < triangleCount; triangleIndex++) {
+      for (var corner = 0; corner < 3; corner++) {
+        var vertex = sourceIndex.getX(triangleIndex * 3 + corner);
+        vertexToTriangles[vertex].push(triangleIndex);
+      }
+    }
+
+    var visited = new Uint8Array(triangleCount);
+    var components = [];
+
+    for (var start = 0; start < triangleCount; start++) {
+      if (visited[start]) continue;
+      var queue = [start];
+      visited[start] = 1;
+      var component = [];
+
+      while (queue.length) {
+        var current = queue.pop();
+        component.push(current);
+        for (var cornerIndex = 0; cornerIndex < 3; cornerIndex++) {
+          var sharedVertex = sourceIndex.getX(current * 3 + cornerIndex);
+          var neighbors = vertexToTriangles[sharedVertex];
+          for (var neighborIndex = 0; neighborIndex < neighbors.length; neighborIndex++) {
+            var neighbor = neighbors[neighborIndex];
+            if (!visited[neighbor]) {
+              visited[neighbor] = 1;
+              queue.push(neighbor);
+            }
+          }
+        }
+      }
+
+      if (component.length >= 20) components.push(componentInfo(source, component));
+    }
+
+    var selected = {
+      hood: null,
+      trunk: null,
+      doorL: null,
+      doorR: null
+    };
+
+    for (var i = 0; i < components.length; i++) {
+      var info = components[i];
+      var width = info.max.x - info.min.x;
+
+      if (!selected.hood &&
+          info.count > 900 &&
+          info.min.z > 0.70 &&
+          info.max.z > 1.90 &&
+          info.min.y > 0.50 &&
+          width > 1.0) {
+        selected.hood = info;
+        continue;
+      }
+
+      if (!selected.trunk &&
+          info.count > 100 &&
+          info.min.z < -1.45 &&
+          info.max.z < -1.45 &&
+          info.min.y > 0.65 &&
+          info.max.y < 0.90 &&
+          width > 0.8) {
+        selected.trunk = info;
+        continue;
+      }
+
+      if (info.count > 200 &&
+          info.min.z < -0.55 &&
+          info.max.z > 0.55 &&
+          info.min.y < 0.12 &&
+          info.max.y < 0.72 &&
+          width > 0.10 &&
+          width < 0.22) {
+        if (info.center.x < 0 && !selected.doorL) selected.doorL = info;
+        if (info.center.x > 0 && !selected.doorR) selected.doorR = info;
+      }
+    }
+
+    if (!selected.hood || !selected.trunk || !selected.doorL || !selected.doorR) {
+      console.warn('Camaro garage panels were not fully detected', selected);
+      return false;
+    }
+
+    var selectedTriangleMap = {};
+    var panelDefs = [
+      { key: 'hood', name: 'sm_hood_body', info: selected.hood },
+      { key: 'trunk', name: 'sm_trunk_body', info: selected.trunk },
+      { key: 'doorL', name: 'sm_door_l', info: selected.doorL },
+      { key: 'doorR', name: 'sm_door_r', info: selected.doorR }
+    ];
+
+    for (var p = 0; p < panelDefs.length; p++) {
+      var ids = panelDefs[p].info.triangles;
+      for (var idIndex = 0; idIndex < ids.length; idIndex++) selectedTriangleMap[ids[idIndex]] = true;
+    }
+
+    var remaining = [];
+    for (var triangle = 0; triangle < triangleCount; triangle++) {
+      if (!selectedTriangleMap[triangle]) remaining.push(triangle);
+    }
+
+    var parent = bodyMesh.parent;
+    if (!parent) return false;
+
+    var baseGeometry = makeCompactGeometry(source, remaining);
+    var baseMesh = bodyMesh.clone(false);
+    baseMesh.name = '_group1M_CarPaint_Base';
+    baseMesh.geometry = baseGeometry;
+    parent.add(baseMesh);
+
+    for (var panelIndex = 0; panelIndex < panelDefs.length; panelIndex++) {
+      var def = panelDefs[panelIndex];
+      var panelGeometry = makeCompactGeometry(source, def.info.triangles);
+      var panelMesh = bodyMesh.clone(false);
+      panelMesh.name = def.name;
+      panelMesh.geometry = panelGeometry;
+      panelMesh.__motornayaGaragePart = def.key;
+      parent.add(panelMesh);
+    }
+
+    bodyMesh.visible = false;
+    scene.__motornayaCamaroGaragePrepared = true;
+    return true;
+  }
+
+  /* game.js creates its own pivot at the bounds center. Move only the four
+     newly-created garage pivots to their real hinge edge after the panel is
+     attached, while preserving the panel's exact world transform. */
+  function hookCamaroGarageHinges() {
+    if (!window.THREE || !THREE.Object3D || THREE.Object3D.prototype.__motornayaCamaroGarageHooked) return false;
+
+    var originalAttach = THREE.Object3D.prototype.attach;
+    THREE.Object3D.prototype.attach = function (object) {
+      originalAttach.call(this, object);
+      if (!object || !object.__motornayaGaragePart || this.__motornayaCamaroGarageHingeDone) return;
+
+      var part = object.__motornayaGaragePart;
+      var box = new THREE.Box3().setFromObject(object);
+      if (box.isEmpty() || !this.parent) return;
+
+      var hingeWorld = box.getCenter(new THREE.Vector3());
+      if (part === 'hood') {
+        hingeWorld.set(hingeWorld.x, box.min.y, box.min.z);
+      } else if (part === 'trunk') {
+        hingeWorld.set(hingeWorld.x, box.min.y, box.max.z);
+      } else {
+        hingeWorld.set(hingeWorld.x, (box.min.y + box.max.y) * 0.5, box.max.z);
+      }
+
+      object.updateMatrixWorld(true);
+      var worldMatrix = object.matrixWorld.clone();
+
+      this.position.copy(this.parent.worldToLocal(hingeWorld.clone()));
+      this.updateMatrixWorld(true);
+
+      var localMatrix = new THREE.Matrix4().copy(this.matrixWorld).invert().multiply(worldMatrix);
+      localMatrix.decompose(object.position, object.quaternion, object.scale);
+      object.updateMatrixWorld(true);
+      this.__motornayaCamaroGarageHingeDone = true;
+    };
+
+    THREE.Object3D.prototype.__motornayaCamaroGarageHooked = true;
+    return true;
+  }
+
   /* game.js currently uses the opposite Y steering sign for this Camaro.
      The wheel/rim hierarchy is already correct, so invert ONLY the four
      front steering pivot matrices. This leaves the car body orientation,
@@ -168,6 +426,7 @@
       return originalLoad.call(this, actualUrl, function (gltf) {
         collectCamaroParts(gltf && gltf.scene);
         protectWholeCamaroTires();
+        prepareCamaroGarage(gltf && gltf.scene);
         if (onLoad) onLoad(gltf);
         restoreWholeCamaroTireNames();
         setTimeout(bindCamaroRims, 0);
@@ -182,11 +441,13 @@
   }
 
   hookCamaroSteeringDirection();
+  hookCamaroGarageHinges();
   hookLoader();
   var tries = 0;
   var timer = setInterval(function () {
     tries++;
     hookCamaroSteeringDirection();
+    hookCamaroGarageHinges();
     if (hookLoader() || tries > 100) clearInterval(timer);
   }, 20);
 
