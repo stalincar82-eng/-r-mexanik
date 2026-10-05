@@ -19,24 +19,10 @@ jobs:
       - name: Patch BMW wheel geometry before publishing
         shell: pwsh
         run: |
-          $path = 'game.js'
-          $text = Get-Content $path -Raw
-          $old = "      var geometry = new THREE.BufferGeometry();`n      for (var attributeName in source.attributes) geometry.setAttribute(attributeName, source.attributes[attributeName]);`n      geometry.morphAttributes = source.morphAttributes;`n      geometry.morphTargetsRelative = source.morphTargetsRelative;`n      var indices = [];`n"
-          $new = "      var geometry = new THREE.BufferGeometry();`n      geometry.morphAttributes = source.morphAttributes;`n      geometry.morphTargetsRelative = source.morphTargetsRelative;`n      var indices = [];`n"
-          if (-not $text.Contains($old)) { throw 'Expected splitTireMesh geometry block was not found' }
-          $text = $text.Replace($old, $new)
-
-          $old2 = "      geometry.setIndex(indices);`n      geometry.computeBoundingBox();`n      geometry.computeBoundingSphere();`n"
-          $new2 = "      /* Compact each wheel partition to the vertices it actually uses.`n         Keeping the original four-wheel vertex buffer makes computeBoundingBox()`n         see unrelated wheels and produces the wrong wheel pivot. */`n      var remap = {};`n      var compactIndices = new Array(indices.length);`n      var uniqueVertexCount = 0;`n      for (var remapIndex = 0; remapIndex < indices.length; remapIndex++) {`n        var sourceVertexIndex = indices[remapIndex];`n        if (remap[sourceVertexIndex] === undefined) remap[sourceVertexIndex] = uniqueVertexCount++;`n        compactIndices[remapIndex] = remap[sourceVertexIndex];`n      }`n      for (var attributeName in source.attributes) {`n        var sourceAttribute = source.attributes[attributeName];`n        if (!sourceAttribute || !sourceAttribute.array || !sourceAttribute.itemSize) continue;`n        var itemSize = sourceAttribute.itemSize;`n        var compactArray = new sourceAttribute.array.constructor(uniqueVertexCount * itemSize);`n        for (var oldVertexKey in remap) {`n          var oldVertex = Number(oldVertexKey);`n          var newVertex = remap[oldVertexKey];`n          for (var component = 0; component < itemSize; component++) {`n            compactArray[newVertex * itemSize + component] = sourceAttribute.array[oldVertex * itemSize + component];`n          }`n        }`n        geometry.setAttribute(attributeName, new THREE.BufferAttribute(compactArray, itemSize, sourceAttribute.normalized));`n      }`n      geometry.setIndex(compactIndices);`n      geometry.computeBoundingBox();`n      geometry.computeBoundingSphere();`n"
-          if (-not $text.Contains($old2)) { throw 'Expected splitTireMesh index block was not found' }
-          $text = $text.Replace($old2, $new2)
-
-          $old3 = "        best.spinPivot.attach(disk);`n        disk.quaternion.identity();`n        disk.updateMatrixWorld(true);`n"
-          $new3 = "        best.spinPivot.attach(disk);`n        /* attach() preserves the disk world transform. Keep its imported`n           wheel-face orientation instead of resetting the local quaternion. */`n        disk.updateMatrixWorld(true);`n"
-          if (-not $text.Contains($old3)) { throw 'Expected BMW disk attachment block was not found' }
-          $text = $text.Replace($old3, $new3)
-
-          Set-Content -Path $path -Value $text -NoNewline -Encoding utf8
+          $patch = 'PASTE_BASE64_PATCH_SCRIPT'
+          [IO.File]::WriteAllBytes('patch_wheels.py', [Convert]::FromBase64String($patch))
+          python patch_wheels.py
+          Remove-Item patch_wheels.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add game.js
