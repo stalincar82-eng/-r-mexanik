@@ -1,10 +1,23 @@
 /* Loader for the proven car-animation bridge + the active garage overhaul. */
 (function(){
   'use strict';
+  function evalSafeOriginal(){
+    try{
+      var xhr=new XMLHttpRequest();
+      xhr.open('GET','car-animation-original.js?wheel-safe-20261006-1',false);
+      xhr.send(null);
+      if(xhr.status<200||xhr.status>=300)throw new Error('car-animation-original.js HTTP '+xhr.status);
+      var code=xhr.responseText;
+      code=code.replace(/setTimeout\(bindCamaroRims,\d+\);/g,'');
+      code=code.replace('hookCamaroSteeringDirection();hookCamaroGarageHinges();','hookCamaroGarageHinges();');
+      (0,eval)(code);
+    }catch(e){console.error('Motornaya safe Camaro wheel bridge failed',e);}
+  }
   function loadGarageLayer(){
+    evalSafeOriginal();
     try {
       var xhr=new XMLHttpRequest();
-      xhr.open('GET','car-animation-base.js?bridge-20261006-11',false);
+      xhr.open('GET','car-animation-base.js?bridge-20261006-12',false);
       xhr.send(null);
       if(xhr.status<200||xhr.status>=300)throw new Error('car-animation-base.js HTTP '+xhr.status);
       (0,eval)(xhr.responseText);
@@ -19,7 +32,7 @@
     window.addEventListener('resize',removeCameraPanel);
     window.addEventListener('orientationchange',removeCameraPanel);
     var s=document.createElement('script');
-    s.src='garage-upgrades.js?garage-overhaul-20261006-11';
+    s.src='garage-upgrades.js?garage-overhaul-20261006-12';
     s.async=false;
     document.head.appendChild(s);
     setTimeout(removeCameraPanel,100);
