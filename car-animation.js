@@ -1,4 +1,4 @@
-/* Моторная — stable garage UI + city visual upgrade. Wheel/camera behavior remains untouched. */
+/* Моторная — stable garage UI + city visual upgrade. */
 (function(){
   'use strict';
   var cityScene=null, originalAdd=null;
@@ -77,7 +77,10 @@
   }
   setTimeout(cityUpgrade,1200);setTimeout(cityUpgrade,2600);
   function loadGarageUI(){
-    try{var s=document.createElement('script');s.src='garage-upgrades.js?garage-ui-20261006-14';s.async=false;document.head.appendChild(s);}catch(e){console.error('Motornaya garage UI failed',e);}
+    try{
+      var s=document.createElement('script');s.src='garage-upgrades.js?garage-ui-20261006-14';s.async=false;document.head.appendChild(s);
+      var cam=document.createElement('script');cam.src='camera-fix.js?camera-fix-20261006-2';cam.async=false;document.head.appendChild(cam);
+    }catch(e){console.error('Motornaya UI failed',e);}
     var fix=document.createElement('style');fix.id='motornaya-camera-kill-final';fix.textContent='#garage-camera-controls{display:none!important;visibility:hidden!important;width:0!important;height:0!important;overflow:hidden!important;pointer-events:none!important}';document.head.appendChild(fix);
     removeCameraPanel();setInterval(removeCameraPanel,250);window.addEventListener('resize',removeCameraPanel);window.addEventListener('orientationchange',removeCameraPanel);
   }
