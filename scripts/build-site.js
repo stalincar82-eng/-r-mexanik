@@ -10,6 +10,9 @@ const files = [
   'game.js',
   'styles.css',
   'car-animation.js',
+  'car-animation-base.js',
+  'car-animation-original.js',
+  'garage-upgrades.js',
   '1967_chevrolet_camaro_ss_350_coupe.glb'
 ];
 
