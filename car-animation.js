@@ -12,7 +12,7 @@
     return;
   }
   var s=document.createElement('script');
-  s.src='garage-upgrades.js?garage-overhaul-20261006-3';
+  s.src='garage-upgrades.js?garage-overhaul-20261006-4';
   s.async=false;
   document.head.appendChild(s);
 })();
