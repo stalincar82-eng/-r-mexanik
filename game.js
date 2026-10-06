@@ -11,6 +11,7 @@
     if (xhr.status < 200 || xhr.status >= 300) throw new Error('HTTP ' + xhr.status);
     var code = xhr.responseText;
     code = code.replace("bmw: { url: 'car-model.glb', label: 'BMW M3 GTR', targetLength: 4.2 },", "bmw: { url: '1967_chevrolet_camaro_ss_350_coupe.glb', label: 'CHEVROLET CAMARO SS · 1967', targetLength: 4.2 },");
+    code = code.replace("scene = new THREE.Scene();", "scene = new THREE.Scene(); window.scene = scene;");
 
     // Safe tuning hooks: the original engine remains intact; only its numeric
     // driving limits are read from the persistent garage progression layer.
