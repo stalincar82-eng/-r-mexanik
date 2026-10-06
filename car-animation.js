@@ -1,20 +1,7 @@
 /* Loader for the proven car-animation bridge + the active garage overhaul. */
 (function(){
   'use strict';
-  function evalSafeOriginal(){
-    try{
-      var xhr=new XMLHttpRequest();
-      xhr.open('GET','car-animation-original.js?wheel-safe-20261006-1',false);
-      xhr.send(null);
-      if(xhr.status<200||xhr.status>=300)throw new Error('car-animation-original.js HTTP '+xhr.status);
-      var code=xhr.responseText;
-      code=code.replace(/setTimeout\(bindCamaroRims,\d+\);/g,'');
-      code=code.replace('hookCamaroSteeringDirection();hookCamaroGarageHinges();','hookCamaroGarageHinges();');
-      (0,eval)(code);
-    }catch(e){console.error('Motornaya safe Camaro wheel bridge failed',e);}
-  }
   function loadGarageLayer(){
-    evalSafeOriginal();
     try {
       var xhr=new XMLHttpRequest();
       xhr.open('GET','car-animation-base.js?bridge-20261006-12',false);
