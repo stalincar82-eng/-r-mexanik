@@ -8,7 +8,39 @@
     if (xhr.status < 200 || xhr.status >= 300) throw new Error('HTTP ' + xhr.status);
     var code = xhr.responseText;
     code = code.replace("bmw: { url: 'car-model.glb', label: 'BMW M3 GTR', targetLength: 4.2 },", "bmw: { url: '1967_chevrolet_camaro_ss_350_coupe.glb', label: 'CHEVROLET CAMARO SS · 1967', targetLength: 4.2 },");
+
+    /* IMPORTANT: the original game has a generic wheel splitter. The Camaro GLB
+       already contains four complete tire meshes, so the splitter must never
+       see their tire names. Rename them before the game's GLTF onLoad runs.
+       This is the proven fix for the front-left tire being cut in half. */
+    if (window.THREE && THREE.GLTFLoader && THREE.GLTFLoader.prototype && !THREE.GLTFLoader.prototype.__motornayaCamaroWholeWheelGuard) {
+      var originalLoad = THREE.GLTFLoader.prototype.load;
+      THREE.GLTFLoader.prototype.load = function (url, onLoad, onProgress, onError) {
+        var guardedLoad = function (gltf) {
+          try {
+            var root = gltf && gltf.scene;
+            var tires = [];
+            if (root && root.traverse) root.traverse(function (node) {
+              if (node && node.isMesh && node.name && /tire|tyre/i.test(node.name)) tires.push(node);
+            });
+            if (tires.length === 4) {
+              for (var i = 0; i < 4; i++) {
+                var tire = tires[i];
+                var parent = tire.parent;
+                tire.name = 'CamaroWheel_' + i;
+                if (parent) parent.name = 'CamaroWheel_' + i + '_Group';
+              }
+            }
+          } catch (guardError) { console.warn('Camaro whole-wheel guard:', guardError); }
+          if (onLoad) onLoad(gltf);
+        };
+        return originalLoad.call(this, url, guardedLoad, onProgress, onError);
+      };
+      THREE.GLTFLoader.prototype.__motornayaCamaroWholeWheelGuard = true;
+    }
+
     (0, eval)(code);
+
     function removeGarageCameraPanel() {
       var panel = document.getElementById('garage-camera-controls');
       if (panel) panel.remove();
