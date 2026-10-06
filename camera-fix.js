@@ -1,57 +1,55 @@
-/* Моторная — stable chase camera controller. */
+/* Моторная — hard chase camera + reliable touch orbit. */
 (function(){
   'use strict';
-  var state={orbit:0,elevation:-0.10,distance:11.5,pointers:{},pinch:0,pinchZoom:11.5,car:null,ready:false};
-  var lastTime=performance.now();
+  if(window.__MOTORNAYA_CAMERA_HARD__)return;
+  window.__MOTORNAYA_CAMERA_HARD__=true;
+  var S={car:null,yaw:0,orbit:0,elev:-0.08,dist:12.5,drag:false,lastX:0,lastY:0,pts:{},ready:false};
   function findCar(scene){
     var wheels=[];
-    scene.traverse(function(o){if(o&&o.name&&/^CamaroWheel_[0-3](_Group)?$/i.test(o.name))wheels.push(o);});
-    if(wheels.length<2)return null;
-    var a=wheels[0], cur=a;
-    while(cur&&cur.parent){
-      var count=0;
-      cur.traverse(function(o){if(o&&o.name&&/^CamaroWheel_[0-3](_Group)?$/i.test(o.name))count++;});
-      if(count>=4)return cur;
-      cur=cur.parent;
-    }
-    return a.parent||a;
+    scene.traverse(function(o){if(o&&o.name&&/^CamaroWheel_[0-3](?:_Group)?$/i.test(o.name))wheels.push(o);});
+    if(wheels.length<4)return null;
+    var root=null;
+    for(var p=wheels[0];p;p=p.parent){var n=0;p.traverse(function(o){if(o&&o.name&&/^CamaroWheel_[0-3](?:_Group)?$/i.test(o.name))n++;});if(n>=4){root=p;break;}}
+    return root||wheels[0].parent;
   }
-  function angleDelta(a,b){return Math.atan2(Math.sin(b-a),Math.cos(b-a));}
-  function install(){
-    if(!window.THREE||THREE.WebGLRenderer.prototype.__motornayaStableCamera)return;
-    var oldRender=THREE.WebGLRenderer.prototype.render;
+  function ad(a,b){return Math.atan2(Math.sin(b-a),Math.cos(b-a));}
+  function canvas(){return document.querySelector('canvas');}
+  function installInput(){
+    var c=canvas();if(!c){setTimeout(installInput,250);return;}
+    c.style.touchAction='none';c.style.webkitUserSelect='none';c.style.userSelect='none';
+    function start(e){S.pts[e.pointerId]={x:e.clientX,y:e.clientY};S.drag=true;S.lastX=e.clientX;S.lastY=e.clientY;if(c.setPointerCapture)try{c.setPointerCapture(e.pointerId);}catch(_){ }if(e.cancelable)e.preventDefault();}
+    function move(e){var p=S.pts[e.pointerId];if(!p)return;var dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;if(Object.keys(S.pts).length===1){S.orbit+=dx*0.014;S.orbit=Math.max(-Math.PI,Math.min(Math.PI,S.orbit));S.elev=Math.max(-0.28,Math.min(0.30,S.elev+dy*0.003));}if(e.cancelable)e.preventDefault();}
+    function end(e){delete S.pts[e.pointerId];if(!Object.keys(S.pts).length)S.drag=false;}
+    c.addEventListener('pointerdown',start,{passive:false});c.addEventListener('pointermove',move,{passive:false});c.addEventListener('pointerup',end,{passive:false});c.addEventListener('pointercancel',end,{passive:false});
+    c.addEventListener('touchstart',function(e){if(e.touches.length===1){S.drag=true;S.lastX=e.touches[0].clientX;S.lastY=e.touches[0].clientY;}e.preventDefault();},{passive:false});
+    c.addEventListener('touchmove',function(e){if(e.touches.length===1){var t=e.touches[0],dx=t.clientX-S.lastX,dy=t.clientY-S.lastY;S.lastX=t.clientX;S.lastY=t.clientY;S.orbit+=dx*0.014;S.orbit=Math.max(-Math.PI,Math.min(Math.PI,S.orbit));S.elev=Math.max(-0.28,Math.min(.30,S.elev+dy*.003));}e.preventDefault();},{passive:false});
+    c.addEventListener('touchend',function(){S.drag=false;},{passive:false});
+  }
+  function installRender(){
+    if(!window.THREE||!THREE.WebGLRenderer){setTimeout(installRender,100);return;}
+    if(THREE.WebGLRenderer.prototype.__MOTOR_HARD_RENDER__)return;
+    var old=THREE.WebGLRenderer.prototype.render;
     THREE.WebGLRenderer.prototype.render=function(scene,camera){
       try{
-        if(!state.car)state.car=findCar(scene);
-        if(state.car){
-          var now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000);lastTime=now;
-          var q=state.car.getWorldQuaternion(new THREE.Quaternion());
-          var forward=new THREE.Vector3(0,0,1).applyQuaternion(q).normalize();
-          var baseYaw=Math.atan2(forward.x,forward.z);
-          var desiredYaw=baseYaw+state.orbit+Math.PI;
-          if(!state.ready){state.yaw=desiredYaw;state.ready=true;}
-          else state.yaw+=angleDelta(state.yaw,desiredYaw)*Math.min(1,dt*9);
-          if(Object.keys(state.pointers).length===0){state.orbit*=Math.max(0,1-dt*1.15);}
-          var dist=state.distance;
-          var x=state.car.position.x+Math.sin(state.yaw)*dist;
-          var z=state.car.position.z+Math.cos(state.yaw)*dist;
-          camera.position.x+=(x-camera.position.x)*Math.min(1,dt*9);
-          camera.position.y+=(((state.car.position.y+2.15+state.elevation+dist*.045))-camera.position.y)*Math.min(1,dt*9);
-          camera.position.z+=(z-camera.position.z)*Math.min(1,dt*9);
-          var target=state.car.position.clone();target.y+=.85;
-          camera.lookAt(target);
+        if(!S.car)S.car=findCar(scene);
+        if(S.car){
+          var q=S.car.getWorldQuaternion(new THREE.Quaternion());
+          var f=new THREE.Vector3(0,0,1).applyQuaternion(q).normalize();
+          var rear=Math.atan2(f.x,f.z)+Math.PI;
+          var desired=rear+S.orbit;
+          if(!S.ready){S.yaw=desired;S.ready=true;}
+          else S.yaw+=ad(S.yaw,desired)*0.16;
+          var pos=S.car.getWorldPosition(new THREE.Vector3());
+          var d=S.dist;
+          var wanted=new THREE.Vector3(pos.x+Math.sin(S.yaw)*d,pos.y+2.0+S.elev,pos.z+Math.cos(S.yaw)*d);
+          camera.position.lerp(wanted,0.16);
+          var look=pos.clone();look.y+=0.8;camera.lookAt(look);
+          if(!S.drag)S.orbit*=0.975;
         }
-      }catch(e){console.warn('Stable camera:',e);}
-      return oldRender.call(this,scene,camera);
+      }catch(e){console.warn('hard camera',e);}
+      return old.call(this,scene,camera);
     };
-    THREE.WebGLRenderer.prototype.__motornayaStableCamera=true;
-    function canvas(){return document.querySelector('#scene canvas');}
-    function point(e){return{x:e.clientX,y:e.clientY};}
-    function down(e){var c=canvas();if(!c||e.target!==c)return;state.pointers[e.pointerId]=point(e);if(Object.keys(state.pointers).length===2){var ids=Object.keys(state.pointers),a=state.pointers[ids[0]],b=state.pointers[ids[1]];state.pinch=Math.hypot(a.x-b.x,a.y-b.y);state.pinchZoom=state.distance;}if(c.setPointerCapture)try{c.setPointerCapture(e.pointerId);}catch(_){}}
-    function move(e){if(!state.pointers[e.pointerId])return;var p=state.pointers[e.pointerId],dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;var ids=Object.keys(state.pointers);if(ids.length>=2){var a=state.pointers[ids[0]],b=state.pointers[ids[1]],d=Math.hypot(a.x-b.x,a.y-b.y);if(!state.pinch)state.pinch=d;state.distance=Math.max(6,Math.min(16,state.pinchZoom-(d-state.pinch)*.018));}else{state.orbit+=dx*.012;state.orbit=Math.max(-Math.PI*.95,Math.min(Math.PI*.95,state.orbit));state.elevation=Math.max(-.35,Math.min(.35,state.elevation+dy*.0025));}if(e.cancelable)e.preventDefault();}
-    function up(e){delete state.pointers[e.pointerId];if(Object.keys(state.pointers).length<2)state.pinch=0;}
-    document.addEventListener('pointerdown',down,{passive:false});document.addEventListener('pointermove',move,{passive:false});document.addEventListener('pointerup',up,{passive:true});document.addEventListener('pointercancel',up,{passive:true});
-    document.addEventListener('wheel',function(e){var c=canvas();if(!c||e.target!==c)return;e.preventDefault();state.distance=Math.max(6,Math.min(16,state.distance+e.deltaY*.018));},{passive:false});
+    THREE.WebGLRenderer.prototype.__MOTOR_HARD_RENDER__=true;
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+  installInput();installRender();
 })();
