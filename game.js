@@ -11,6 +11,26 @@
     if (xhr.status < 200 || xhr.status >= 300) throw new Error('HTTP ' + xhr.status);
     var code = xhr.responseText;
     code = code.replace("bmw: { url: 'car-model.glb', label: 'BMW M3 GTR', targetLength: 4.2 },", "bmw: { url: '1967_chevrolet_camaro_ss_350_coupe.glb', label: 'CHEVROLET CAMARO SS · 1967', targetLength: 4.2 },");
+
+    // Safe tuning hooks: the original engine remains intact; only its numeric
+    // driving limits are read from the persistent garage progression layer.
+    code = code.replace(
+      "else if (forward) speed = Math.min(68, speed + 20 * delta);",
+      "else if (forward) { var mt = window.__motornayaTune || {}; speed = Math.min(mt.maxSpeed || 68, speed + (mt.accel || 20) * delta); }"
+    );
+    code = code.replace(
+      "else if (reverse) speed = Math.max(-22, speed - 14 * delta);",
+      "else if (reverse) { var mr = window.__motornayaTune || {}; speed = Math.max(-(mr.reverse || 22), speed - 14 * delta); }"
+    );
+    code = code.replace(
+      "speed = Math.max(-22, Math.min(68, speed));",
+      "var ml = window.__motornayaTune || {}; speed = Math.max(-(ml.reverse || 22), Math.min(ml.maxSpeed || 68, speed));"
+    );
+    code = code.replace(
+      "heading += steering * Math.min(1.35, Math.abs(speed) / 18) * delta * (speed < 0 ? -1 : 1);",
+      "heading += steering * Math.min(1.35, Math.abs(speed) / 18) * (window.__motornayaTune && window.__motornayaTune.grip || 1) * delta * (speed < 0 ? -1 : 1);"
+    );
+
     (0, eval)(code);
 
     // The old floating camera control block is permanently removed.
