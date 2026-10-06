@@ -4,7 +4,7 @@
   function loadGarageLayer(){
     try {
       var xhr=new XMLHttpRequest();
-      xhr.open('GET','car-animation-base.js?bridge-20261006-7',false);
+      xhr.open('GET','car-animation-base.js?bridge-20261006-11',false);
       xhr.send(null);
       if(xhr.status<200||xhr.status>=300)throw new Error('car-animation-base.js HTTP '+xhr.status);
       (0,eval)(xhr.responseText);
@@ -19,7 +19,7 @@
     window.addEventListener('resize',removeCameraPanel);
     window.addEventListener('orientationchange',removeCameraPanel);
     var s=document.createElement('script');
-    s.src='garage-upgrades.js?garage-overhaul-20261006-10';
+    s.src='garage-upgrades.js?garage-overhaul-20261006-11';
     s.async=false;
     document.head.appendChild(s);
     setTimeout(removeCameraPanel,100);
