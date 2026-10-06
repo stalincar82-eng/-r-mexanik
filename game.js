@@ -13,6 +13,24 @@
     code = code.replace("bmw: { url: 'car-model.glb', label: 'BMW M3 GTR', targetLength: 4.2 },", "bmw: { url: '1967_chevrolet_camaro_ss_350_coupe.glb', label: 'CHEVROLET CAMARO SS · 1967', targetLength: 4.2 },");
     (0, eval)(code);
 
+    // The old floating camera control block is permanently removed.
+    function removeGarageCameraPanel() {
+      var panel = document.getElementById('garage-camera-controls');
+      if (panel) panel.remove();
+    }
+    var cameraStyle = document.getElementById('motornaya-camera-kill-style');
+    if (!cameraStyle) {
+      cameraStyle = document.createElement('style');
+      cameraStyle.id = 'motornaya-camera-kill-style';
+      cameraStyle.textContent = '#garage-camera-controls{display:none!important;visibility:hidden!important;width:0!important;height:0!important;overflow:hidden!important;pointer-events:none!important}';
+      document.head.appendChild(cameraStyle);
+    }
+    removeGarageCameraPanel();
+    if (window.MutationObserver) {
+      new MutationObserver(removeGarageCameraPanel).observe(document.documentElement, { childList: true, subtree: true });
+    }
+    setInterval(removeGarageCameraPanel, 500);
+
     // Keep the visible UI consistent with the actual default model.
     function syncCamaroBrand() {
       var select = document.getElementById('car-selector');
