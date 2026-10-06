@@ -9,10 +9,15 @@
     var code = xhr.responseText;
     code = code.replace("bmw: { url: 'car-model.glb', label: 'BMW M3 GTR', targetLength: 4.2 },", "bmw: { url: '1967_chevrolet_camaro_ss_350_coupe.glb', label: 'CHEVROLET CAMARO SS · 1967', targetLength: 4.2 },");
 
-    /* IMPORTANT: the original game has a generic wheel splitter. The Camaro GLB
-       already contains four complete tire meshes, so the splitter must never
-       see their tire names. Rename them before the game's GLTF onLoad runs.
-       This is the proven fix for the front-left tire being cut in half. */
+    /* Camaro uses the opposite steering sign from the old BMW model. */
+    code = code.replace(
+      "var targetSteering = (left ? 1 : 0) - (right ? 1 : 0);",
+      "var targetSteering = (right ? 1 : 0) - (left ? 1 : 0);"
+    );
+
+    /* The old game has a generic wheel splitter. The Camaro GLB already contains
+       four complete tires, so prevent the splitter from treating them as a tire
+       source. Rename the tire meshes and their immediate wheel parents first. */
     if (window.THREE && THREE.GLTFLoader && THREE.GLTFLoader.prototype && !THREE.GLTFLoader.prototype.__motornayaCamaroWholeWheelGuard) {
       var originalLoad = THREE.GLTFLoader.prototype.load;
       THREE.GLTFLoader.prototype.load = function (url, onLoad, onProgress, onError) {
@@ -38,6 +43,14 @@
       };
       THREE.GLTFLoader.prototype.__motornayaCamaroWholeWheelGuard = true;
     }
+
+    /* The original disk matcher is BMW-specific. Camaro rims are named Rim_Main.
+       Make the existing accessory binder recognize them so the rims are attached
+       to the same wheel pivots and rotate/steer together with the tires. */
+    code = code.replace(
+      "if (/^(?:m:)?SM_Disk_[LR]_0000_001_SM_Disk_[LR]_0000_001_MAT_Details_Disk(?:_009)?_/i.test(node.name)) {",
+      "if (/^(?:m:)?SM_Disk_[LR]_0000_001_SM_Disk_[LR]_0000_001_MAT_Details_Disk(?:_009)?_/i.test(node.name) || /Rim_Main/i.test(node.name)) {"
+    );
 
     (0, eval)(code);
 
