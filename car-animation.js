@@ -3,23 +3,17 @@
   'use strict';
   function loadGarageLayer(){
     try {
-      var xhr = new XMLHttpRequest();
+      var xhr=new XMLHttpRequest();
       xhr.open('GET','car-animation-base.js?bridge-20261006-7',false);
       xhr.send(null);
-      if(xhr.status < 200 || xhr.status >= 300) throw new Error('car-animation-base.js HTTP '+xhr.status);
+      if(xhr.status<200||xhr.status>=300)throw new Error('car-animation-base.js HTTP '+xhr.status);
       (0,eval)(xhr.responseText);
-    } catch(e) {
-      console.error('Motornaya car-animation base failed',e);
-      return;
-    }
+    }catch(e){console.error('Motornaya car-animation base failed',e);return;}
     var fix=document.createElement('style');
     fix.id='motornaya-camera-position-fix';
     fix.textContent='#garage-camera-controls{display:none!important}';
-    document.head.appendChild(f);
-    function removeCameraPanel(){
-      var panel=document.getElementById('garage-camera-controls');
-      if(panel) panel.remove();
-    }
+    document.head.appendChild(fix);
+    function removeCameraPanel(){var panel=document.getElementById('garage-camera-controls');if(panel)panel.remove();}
     removeCameraPanel();
     setInterval(removeCameraPanel,250);
     window.addEventListener('resize',removeCameraPanel);
@@ -28,22 +22,9 @@
     s.src='garage-upgrades.js?garage-overhaul-20261006-10';
     s.async=false;
     document.head.appendChild(s);
-
-    // Load the new progression layer separately so the proven garage/game
-    // bridge stays intact and the feature layer can be removed independently.
-    setTimeout(function(){
-      if(window.__motornayaProgressionLoader)return;
-      window.__motornayaProgressionLoader=true;
-      var p=document.createElement('script');
-      p.src='motornaya-progression.js?progression-20261006-1';
-      p.async=false;
-      document.head.appendChild(p);
-    },900);
-
     setTimeout(removeCameraPanel,100);
     setTimeout(removeCameraPanel,500);
     setTimeout(removeCameraPanel,1000);
   }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',loadGarageLayer,{once:true});
-  else loadGarageLayer();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadGarageLayer,{once:true});else loadGarageLayer();
 })();
