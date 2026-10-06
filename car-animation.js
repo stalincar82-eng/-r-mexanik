@@ -28,6 +28,18 @@
     s.src='garage-upgrades.js?garage-overhaul-20261006-10';
     s.async=false;
     document.head.appendChild(s);
+
+    // Load the new progression layer separately so the proven garage/game
+    // bridge stays intact and the feature layer can be removed independently.
+    setTimeout(function(){
+      if(window.__motornayaProgressionLoader)return;
+      window.__motornayaProgressionLoader=true;
+      var p=document.createElement('script');
+      p.src='motornaya-progression.js?progression-20261006-1';
+      p.async=false;
+      document.head.appendChild(p);
+    },900);
+
     setTimeout(removeCameraPanel,100);
     setTimeout(removeCameraPanel,500);
     setTimeout(removeCameraPanel,1000);
